@@ -731,6 +731,13 @@
       </exclusions>
     </dependency>
   </dependencies>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/arlixu/lucene-hadoop</url>
+    </repository>
+  </distributionManagement>
   <properties>
     <lucene.version>8.11.1</lucene.version>
     <scala.version.major>2.12</scala.version.major>
