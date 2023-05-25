@@ -1,5 +1,5 @@
 # lucene-hadoop
-A Lucene Datasource of Spark.Supports push down filter and push down aggeragation
+A Lucene Datasource of Spark.Supports push down filter and push down aggeragation.Test on spark version 3.0.2
 
 ## Demo
 ```
