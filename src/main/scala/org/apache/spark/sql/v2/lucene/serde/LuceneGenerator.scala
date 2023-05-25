@@ -80,6 +80,15 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
 
   private def makeConverter(structField: StructField,isRoot:Boolean=true): ValueConverter = {
     structField.dataType match {
+    case BooleanType=>
+        (row: SpecializedGetters, ordinal: Int, doc: Document) => {
+          val intValue= if(row.getBoolean(ordinal)) 1 else 0
+          doc.add(new IntPoint(structField.name, row.getInt(ordinal)))
+          doc.add(new SortedNumericDocValuesField(structField.name,intValue))
+          if(isRoot){
+            doc.add(new StoredField(structField.name, intValue))
+          }
+        }
     case IntegerType =>
       (row: SpecializedGetters, ordinal: Int, doc: Document) => {
         doc.add(new IntPoint(structField.name, row.getInt(ordinal)))

@@ -36,6 +36,9 @@ class LuceneDeserializer(dataSchema: StructType,
         resultRow.setNullAt(idx)
       }else{
         requiredSchema(idx).dataType match {
+          case BooleanType =>
+            val booleanValue=doc.get(requiredSchema(idx).name).equals("1")
+            resultRow.setBoolean(idx,booleanValue)
           case IntegerType =>
             resultRow.setInt(idx,doc.get(requiredSchema(idx).name).toInt)
           case LongType =>
