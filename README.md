@@ -34,3 +34,25 @@ A Lucene Datasource of Spark.Supports push down filter and push down aggeragatio
       df.write.format("lucene").mode("overwrite").save("spark_lucene")
       val df= spark.read.format("lucene").load("spark_lucene")
  ```
+
+## Supported Features
+1. Read and write data with schema using spark-sql/dataframe api,as beyond.  
+2. Pushed filters support not only for `atomic` types (`int,string..`) but also for `complex` types. e.g. `Map<String,String>. Array. StructType`. 
+If you have a tags:Map<String,String> field. lucene hadoop will allow you to search for all keys of the `tags` field.
+just like
+```
+df.filter("tags.`your_key`='you_value'")
+```
+And you can also push filters for `array_contains()` expression as follows:
+```
+df.filter("array_contains(your_array_col,'you_value')")
+```
+Both of the above cases will be converted to a TermQuery of Lucene query.  
+
+Of course you can also push filters for any other expression. e.g. `>`,`<`,`in`...  
+
+3. Push down aggregation support for `count,max,min,sum` by lucene `DocValuesField`. (Due to the limitations of Spark 3.0.2, aggregation push down for `avg` is not supported.The alternative solution is to calculate the sum and count first, and then divide them.)  
+4. Prefer location implements for partition file.  
+When writing a dataframe as `lucene` format,each partition file will be written as a lucene index dir on hdfs,with a suffix `.lucene`.  
+Since opening an index in Lucene is a relatively expensive operation, we want to perform the index opening only when loading the Lucene-format data source for the first time. This requires ensuring that queries for the corresponding partition files are allocated to a fixed executor as much as possible.
+
