@@ -4,8 +4,13 @@ import org.apache.lucene.document.{DoublePoint, FloatPoint, IntPoint, LongPoint}
 import org.apache.lucene.index.Term
 import org.apache.lucene.search._
 import org.apache.lucene.util.BytesRef
+import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.catalyst.util.DateTimeUtils.SQLDate
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
+
+import java.sql.{Date, Timestamp}
+import java.time.{Instant, LocalDate}
 
 object LuceneFilters {
 
@@ -16,6 +21,16 @@ object LuceneFilters {
     val finalStr = replacedStr.replaceAll(doubleDotPattern, "\\.*")
     finalStr
   }
+  private def dateToDays(date: Any): SQLDate = date match {
+    case d: Date => DateTimeUtils.fromJavaDate(d)
+    case ld: LocalDate => DateTimeUtils.localDateToDays(ld)
+  }
+
+  private def timestampToMicros(v: Any): Long = v match {
+    case i: Instant => DateTimeUtils.instantToMicros(i)
+    case t: Timestamp => DateTimeUtils.fromJavaTimestamp(t)
+  }
+
    case class AtomicField(fieldNames: Array[String],fieldType: DataType)
 
   //  private def getDataTypeBy
@@ -68,6 +83,10 @@ object LuceneFilters {
             IntPoint.newRangeQuery(fieldName, Math.addExact(value.asInstanceOf[Int], 1), Int.MaxValue)
           case LongType =>
             LongPoint.newRangeQuery(fieldName, Math.addExact(value.asInstanceOf[Long], 1), Long.MaxValue)
+          case DateType=>
+            IntPoint.newRangeQuery(fieldName, Math.addExact(dateToDays(value), 1), Int.MaxValue)
+          case TimestampType =>
+            LongPoint.newRangeQuery(fieldName, Math.addExact(timestampToMicros(value), 1), Long.MaxValue)
           case FloatType =>
             FloatPoint.newRangeQuery(fieldName, Math.nextUp(value.asInstanceOf[Float]), Float.PositiveInfinity)
           case DoubleType =>
@@ -83,6 +102,10 @@ object LuceneFilters {
             IntPoint.newRangeQuery(fieldName, value.asInstanceOf[Int], Int.MaxValue)
           case LongType =>
             LongPoint.newRangeQuery(fieldName, value.asInstanceOf[Long], Long.MaxValue)
+          case DateType=>
+            IntPoint.newRangeQuery(fieldName, dateToDays(value), Int.MaxValue)
+          case TimestampType =>
+            LongPoint.newRangeQuery(fieldName, timestampToMicros(value), Long.MaxValue)
           case FloatType =>
             FloatPoint.newRangeQuery(fieldName, value.asInstanceOf[Float], Float.PositiveInfinity)
           case DoubleType =>
@@ -99,6 +122,10 @@ object LuceneFilters {
             IntPoint.newRangeQuery(fieldName, Int.MinValue, Math.addExact(value.asInstanceOf[Int], -1))
           case LongType =>
             LongPoint.newRangeQuery(fieldName, Long.MinValue, Math.addExact(value.asInstanceOf[Long], -1))
+          case DateType=>
+            IntPoint.newRangeQuery(fieldName, Int.MinValue, Math.addExact(dateToDays(value), -1))
+          case TimestampType =>
+            LongPoint.newRangeQuery(fieldName, Long.MinValue, Math.addExact(timestampToMicros(value), -1))
           case FloatType =>
             FloatPoint.newRangeQuery(fieldName, Float.NegativeInfinity, Math.nextDown(value.asInstanceOf[Float]))
           case DoubleType =>
@@ -114,6 +141,10 @@ object LuceneFilters {
             IntPoint.newRangeQuery(fieldName, Int.MinValue, value.asInstanceOf[Int])
           case LongType =>
             LongPoint.newRangeQuery(fieldName, Long.MinValue, value.asInstanceOf[Long])
+          case DateType=>
+            IntPoint.newRangeQuery(fieldName, Int.MinValue, dateToDays(value))
+          case TimestampType =>
+            LongPoint.newRangeQuery(fieldName, Long.MinValue, timestampToMicros(value))
           case FloatType =>
             FloatPoint.newRangeQuery(fieldName, Float.NegativeInfinity, value.asInstanceOf[Float])
           case DoubleType =>
@@ -159,6 +190,10 @@ object LuceneFilters {
     val query = attrDataType(attr,nameTypeMap) match {
       case IntegerType =>
         IntPoint.newExactQuery(attr, value.asInstanceOf[Int])
+      case DateType=>
+        IntPoint.newExactQuery(attr, dateToDays(value))
+      case TimestampType =>
+        LongPoint.newExactQuery(attr,timestampToMicros(value))
       case LongType =>
         LongPoint.newExactQuery(attr, value.asInstanceOf[Long])
       case FloatType =>

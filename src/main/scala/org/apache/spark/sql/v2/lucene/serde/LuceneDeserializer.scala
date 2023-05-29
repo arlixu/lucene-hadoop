@@ -39,9 +39,9 @@ class LuceneDeserializer(dataSchema: StructType,
           case BooleanType =>
             val booleanValue=doc.get(requiredSchema(idx).name).equals("1")
             resultRow.setBoolean(idx,booleanValue)
-          case IntegerType =>
+          case IntegerType|DateType =>
             resultRow.setInt(idx,doc.get(requiredSchema(idx).name).toInt)
-          case LongType =>
+          case LongType|TimestampType =>
             resultRow.setLong(idx,doc.get(requiredSchema(idx).name).toLong)
           case FloatType =>
             resultRow.setFloat(idx,doc.get(requiredSchema(idx).name).toFloat)

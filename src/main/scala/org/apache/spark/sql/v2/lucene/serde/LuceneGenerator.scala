@@ -130,6 +130,24 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
         doc.add(new StringField(structField.name, row. getUTF8String(ordinal).toString, isStore))
         doc.add(new SortedSetDocValuesField(structField.name, new BytesRef(row.getUTF8String(ordinal).toString)))
       }
+    case DateType =>
+      (row: SpecializedGetters, ordinal: Int, doc: Document) => {
+        val days=row.getInt(ordinal)
+        doc.add(new IntPoint(structField.name, days))
+        doc.add(new SortedNumericDocValuesField(structField.name, days.toLong))
+        if(isRoot) {
+          doc.add(new StoredField(structField.name, days))
+        }
+      }
+    case TimestampType =>
+      (row: SpecializedGetters, ordinal: Int, doc: Document) => {
+        val timestamp=row.getLong(ordinal)
+        doc.add(new LongPoint(structField.name, timestamp))
+        doc.add(new SortedNumericDocValuesField(structField.name, timestamp))
+        if(isRoot) {
+          doc.add(new StoredField(structField.name,timestamp))
+        }
+      }
     case ArrayType(elementType, _) => (row: SpecializedGetters, ordinal: Int, doc: Document)  =>{
       // Need to put all converted values to a list, can't reuse object.
       val array = row.getArray(ordinal)

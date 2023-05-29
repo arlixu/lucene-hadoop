@@ -6,6 +6,7 @@ import org.apache.spark.sql.functions.{count, sum}
 import org.apache.spark.sql.types._
 import org.scalatest.funsuite.AnyFunSuite
 
+import java.sql.{Date, Timestamp}
 import scala.collection.JavaConverters._
 
 class LuceneWriterTest extends AnyFunSuite with Logging with SparkSessionTestWrapper {
@@ -14,7 +15,8 @@ class LuceneWriterTest extends AnyFunSuite with Logging with SparkSessionTestWra
     val userDefinedSchema_01 = StructType(
       List(
         StructField("isDeleted",BooleanType,true),
-        StructField("Day", IntegerType, true),
+        StructField("Day", DateType, true),
+        StructField("Timestamp", TimestampType, true),
         StructField("Customer ID", StringType, true),
         StructField("Customer Name", StringType, true),
         StructField("Standard Package", IntegerType, true),
@@ -31,11 +33,11 @@ class LuceneWriterTest extends AnyFunSuite with Logging with SparkSessionTestWra
     )
 
     val expectedData_01 = List(
-      Row(false,1, "CA869", "Phạm Uyển Trinh", null, null, 2200.01f, null, Array("1", "2", "3"), Map(), Row("John Doe", 30)),
-      Row(true,2, "CA870", "Nguyễn Liên Thảo", null, null, 2000.02f, 1350.05d, Array("1", "2", "3"), null, Row("Jane Smith", 25)),
-      Row(false,4, "CA871", "Lê Thị Nga", 17000, null, null, null, Array("1", "2", "3"), Map("color" -> "yellow", "0.3" -> "1"), Row("David Johnson", 40)),
-      Row(false,1, "CA872", "Phan Tố Nga", null, null, 2000.02f, null, Array("1", "2", "3"), Map(), Row("Sarah Williams", 35)),
-      Row(false,1, "CA873", "Nguyễn Thị Teresa Teng", null, 132324l, 1200.03f, null, Array("1", "2", "3","4"), Map("color" -> "red", "0.5" -> "2"), Row("Michael Brown", 45))
+      Row(false,Date.valueOf("2023-05-29"),Timestamp.valueOf("2023-05-29 00:00:01"),"CA869", "Phạm Uyển Trinh", null, null, 2200.01f, null, Array("1", "2", "3"), Map(), Row("John Doe", 30)),
+      Row(true,Date.valueOf("2023-05-29"), Timestamp.valueOf("2023-05-29 00:00:02"),"CA870", "Nguyễn Liên Thảo", null, null, 2000.02f, 1350.05d, Array("1", "2", "3"), null, Row("Jane Smith", 25)),
+      Row(false,Date.valueOf("2023-05-30"),Timestamp.valueOf("2023-05-30 00:00:01") ,"CA871", "Lê Thị Nga", 17000, null, null, null, Array("1", "2", "3"), Map("color" -> "yellow", "0.3" -> "1"), Row("David Johnson", 40)),
+      Row(false,Date.valueOf("2023-05-31"),Timestamp.valueOf("2023-05-31 00:00:01") ,"CA872", "Phan Tố Nga", null, null, 2000.02f, null, Array("1", "2", "3"), Map(), Row("Sarah Williams", 35)),
+      Row(false,Date.valueOf("2023-06-01"),Timestamp.valueOf("2023-06-01 00:00:01") ,"CA873", "Nguyễn Thị Teresa Teng", null, 132324l, 1200.03f, null, Array("1", "2", "3","4"), Map("color" -> "red", "0.5" -> "2"), Row("Michael Brown", 45))
     ).asJava
 
 
@@ -55,7 +57,7 @@ class LuceneWriterTest extends AnyFunSuite with Logging with SparkSessionTestWra
    val df= spark.read.format("lucene").load("spark_lucene")
 //     .groupBy("`Map Info`.color").count()
 //     .filter("`Map Info`.color='red'")
-     .filter(" (Day=1 and array_contains(`Array Info`,'4') )")
+     .filter(" (Day>'2023-05-29' and array_contains(`Array Info`,'3') )")
 //     .filter("`Customer ID`='CA869'")
 //   val df= spark.read.format("orc").load("spark_orc").filter("infos.name='Michael Brown'")
     df.printSchema()
