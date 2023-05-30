@@ -21,8 +21,9 @@ import org.seabow.spark.v2.lucene.LuceneOptions
 import java.io.CharArrayWriter
 
 class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Configuration, val options: LuceneOptions) {
+  val dirPath=s"$path.dir"
   val (dir, writer) = {
-    val dir = new HdfsDirectory(new Path(path), new Configuration)
+    val dir = new HdfsDirectory(new Path(dirPath), new Configuration)
     // 分析器
     val analyzer = new StandardAnalyzer
     // 索引配置
@@ -40,10 +41,17 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
 
   def writeSchema():Unit={
     val hdfs=dir.getFileSystem
-    val schema=new Path(path+"/.schema")
+    val schema=new Path(dirPath+"/.schema")
     if(!hdfs.exists(schema)){
       val dos=hdfs.create(schema)
       val bytes=dataSchema.toDDL.getBytes()
+      dos.write(bytes, 0, bytes.length)
+      dos.close()
+    }
+    val partitionFilePath=new Path(path)
+    if(!hdfs.exists(partitionFilePath)){
+      val dos=hdfs.create(partitionFilePath)
+      val bytes=dirPath.getBytes()
       dos.write(bytes, 0, bytes.length)
       dos.close()
     }

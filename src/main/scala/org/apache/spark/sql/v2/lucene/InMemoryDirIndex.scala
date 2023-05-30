@@ -29,6 +29,7 @@ import org.apache.spark.sql.catalyst.expressions.{AttributeReference, BoundRefer
 import org.apache.spark.sql.catalyst.{InternalRow, expressions}
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.execution.streaming.FileStreamSink
+import org.apache.spark.sql.lucene._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.util.SerializableConfiguration
 
@@ -185,7 +186,7 @@ class InMemoryDirIndex(
 
   override def listFiles(partitionFilters: Seq[Expression], dataFilters: Seq[Expression]): Seq[PartitionDirectory] = {
     def isNonEmptyFile(f: FileStatus): Boolean = {
-      isDataPath(f.getPath) && f.getPath.toString.endsWith(".lucene")
+      isDataPath(f.getPath) && f.getPath.toString.endsWith(LUCENE_FILE_SUFFIX)
     }
     val selectedPartitions = if (partitionSpec().partitionColumns.isEmpty) {
       PartitionDirectory(InternalRow.empty, allFiles().filter(isNonEmptyFile)) :: Nil
@@ -454,10 +455,11 @@ object InMemoryDirIndex extends Logging {
     val filteredStatuses = statuses.filterNot(status => shouldFilterOut(status.getPath.getName))
 
     val allLeafStatuses = {
-      val (dirs, topLevelFiles) = filteredStatuses.partition{
+      var (dirs, topLevelFiles) = filteredStatuses.partition{
         s=>
-          s.isDirectory && !s.getPath.toString.endsWith(".lucene")
+          s.isDirectory
       }
+      topLevelFiles=topLevelFiles.filter(_.getPath.toString.endsWith(LUCENE_FILE_SUFFIX))
       val nestedFiles: Seq[FileStatus] = sessionOpt match {
         case Some(session) =>
           bulkListLeafFiles(
@@ -544,7 +546,7 @@ object InMemoryDirIndex extends Logging {
     // 2. everything that ends with `._COPYING_`, because this is a intermediate state of file. we
     // should skip this file in case of double reading.
     val exclude = (pathName.startsWith("_") && !pathName.contains("=")) ||
-      pathName.startsWith(".") || pathName.endsWith("._COPYING_")
+      pathName.startsWith(".") || pathName.endsWith("._COPYING_")||pathName.endsWith(LUCENE_DIR_SUFFIX)
     val include = pathName.startsWith("_common_metadata") || pathName.startsWith("_metadata")
     exclude && !include
   }

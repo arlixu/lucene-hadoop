@@ -23,8 +23,16 @@ import org.apache.hadoop.mapreduce.{Job, TaskAttemptContext}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.{FileFormat, OutputWriter, OutputWriterFactory, PartitionedFile}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.sources.{DataSourceRegister, Filter}
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.v2.lucene.LuceneFilters
+import org.apache.spark.sql.v2.lucene.serde.LuceneDeserializer
+import org.apache.spark.util.SerializableConfiguration
+import org.seabow.spark.v2.lucene.cache.LuceneSearcherCache
+import org.seabow.spark.v2.lucene.collector.PagingCollector
+
+import java.net.URI
 
 /** derived from binary file data source. Needed to support writing Lucene using the V2 API
  */
@@ -74,7 +82,22 @@ class LuceneFileFormat extends FileFormat with DataSourceRegister {
                                       options: Map[String, String],
                                       hadoopConf: Configuration
                                     ): PartitionedFile => Iterator[InternalRow] = {
-    throw new UnsupportedOperationException("LuceneFileFormat as fallback format for V2 supports writing only")
+    val broadcastedConf =
+      sparkSession.sparkContext.broadcast(new SerializableConfiguration(hadoopConf))
+    (file: PartitionedFile) => {
+      val conf = broadcastedConf.value.value
+      val filePath = new Path(new URI(file.filePath+".dir"))
+      val searcher = LuceneSearcherCache.getSearcherInstance(filePath, conf)
+      val query = LuceneFilters.createFilter(dataSchema, filters)
+      val deserializer = new LuceneDeserializer(dataSchema, requiredSchema, SQLConf.get.getConf(SQLConf.SESSION_LOCAL_TIMEZONE))
+      var currentPage = 1
+      var pagingCollector = new PagingCollector(currentPage, Int.MaxValue)
+      searcher.search(query, pagingCollector)
+      var docs = pagingCollector.docs
+      docs.map(doc => deserializer.deserialize(searcher.doc(doc))).iterator
+    }
   }
+
+
 
 }

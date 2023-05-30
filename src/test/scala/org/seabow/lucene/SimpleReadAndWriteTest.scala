@@ -92,7 +92,7 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
   }
 
   test("partition purge"){
-    val df= spark.read.format("lucene").load("spark_lucene").filter("partition=1")
+    val df= spark.read.format("lucene").load("spark_lucene").filter("partition=2")
     df.explain(true)
     df.show(false)
   }
@@ -105,7 +105,7 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
     df.write.insertInto("test_table")
   }
   test("spark-sql select "){
-    val selectSql= s"select * from `lucene`.`spark-warehouse/test_table/`"
-    spark.sql(selectSql).show()
+    val selectSql= s"select count(*) from `lucene`.`spark-warehouse/test_table/` where `Map Info`.`0.5`='2' and Day>'2023-05-29'"
+    spark.sql(selectSql).explain(true)
   }
 }

@@ -10,7 +10,7 @@ object LuceneUtils {
     val file=files.head
     val conf = sparkSession.sessionState.newHadoopConfWithOptions(options)
     val fs=file.getPath.getFileSystem(conf)
-    val schemaPath=new Path(file.getPath.toString+"/.schema")
+    val schemaPath=new Path(file.getPath.toString+".dir/.schema")
     var ddl=""
     if (fs.exists(schemaPath)) {
       var result = new Array[Byte](0)

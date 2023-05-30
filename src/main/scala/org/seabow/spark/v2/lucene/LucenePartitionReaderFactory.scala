@@ -36,8 +36,7 @@ case class LucenePartitionReaderFactory(
       return buildReaderWithAggregation(file, conf)
     }
 
-
-    val filePath=new Path(new URI(file.filePath))
+    val filePath=new Path(new URI(file.filePath+".dir"))
    val searcher=LuceneSearcherCache.getSearcherInstance(filePath,conf)
     //todo 这里需要通过pushedFilters来转query。
     val query = LuceneFilters.createFilter(dataSchema,filters)
