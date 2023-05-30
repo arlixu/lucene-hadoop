@@ -3,9 +3,9 @@ package org.seabow.lucene
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions.{count, sum}
+import org.apache.spark.sql.lucene._
 import org.apache.spark.sql.types._
 import org.scalatest.funsuite.AnyFunSuite
-import org.seabow.lucene._
 
 import java.sql.{Date, Timestamp}
 import scala.collection.JavaConverters._
