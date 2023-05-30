@@ -40,12 +40,12 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
       //group by agg
       for (i <- 0 until (groupBySchema.length)) {
         groupBySchema(i).dataType match {
-          case IntegerType =>
+          case IntegerType|DateType =>
             val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedNumericDocValues]
             if (docValues.advanceExact(doc)) {
               result.setInt(i, docValues.nextValue().toInt)
             }
-          case LongType =>
+          case LongType|TimestampType =>
             val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedNumericDocValues]
             if (docValues.advanceExact(doc)) {
               result.setLong(i, docValues.nextValue())
@@ -74,8 +74,6 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
       }else{
        bucketMap.get(result).get
      }
-      //TODO 计算新的 min/max/count/countStar?
-      //1.获取Max/Min/Sum对应的col col->DocValues
       for (i <- 0 until agg.aggregateExpressions().length)
         agg.aggregateExpressions()(i) match {
           case _:Count | _:CountStar =>
