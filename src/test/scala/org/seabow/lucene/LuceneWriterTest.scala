@@ -42,7 +42,7 @@ class LuceneWriterTest extends AnyFunSuite with Logging with SparkSessionTestWra
 
 
       val df=spark.createDataFrame(expectedData_01,userDefinedSchema_01)
-      df.write.format("lucene").mode("overwrite").save("spark_lucene")
+      df.write.format("lucene").mode("overwrite").save("spark_lucene/partition=1")
 //      df.write.format("orc").mode("overwrite").save("spark_orc")
 //      val indexPath=FileSystem.get(new Configuration()).listStatus(new Path("spark_lucene")).map(_.getPath.toString
 //      ).filter(_.endsWith(".lucene")).head
@@ -93,6 +93,12 @@ class LuceneWriterTest extends AnyFunSuite with Logging with SparkSessionTestWra
     df.printSchema()
 
 //    df.explain(true)
+    df.show(false)
+  }
+
+  test("partition purge"){
+    val df= spark.read.format("lucene").load("spark_lucene").filter("partition=1")
+    df.explain(true)
     df.show(false)
   }
 

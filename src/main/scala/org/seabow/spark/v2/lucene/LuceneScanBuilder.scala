@@ -20,6 +20,7 @@ case class LuceneScanBuilder(
     schema: StructType,
     dataSchema: StructType,
     options: CaseInsensitiveStringMap,
+    oldScan:LuceneScan=null,
     buildByHolder: Boolean=false)
   extends FileScanBuilder(sparkSession, fileIndex, dataSchema) with SupportsLucenePushDownFilters with SupportsPushDownAggregates{
   private val partitionSchema = fileIndex.partitionSchema
@@ -34,8 +35,9 @@ case class LuceneScanBuilder(
     if (pushedAggregations.isEmpty) {
       finalSchema = readDataSchema()
     }
+    val partitionFilters= if(oldScan!=null){oldScan.partitionFilters}else Seq.empty
     LuceneScan(sparkSession, hadoopConf, fileIndex, dataSchema,
-      finalSchema, readPartitionSchema(), options,  pushedFilters(),pushedAggregations,buildByHolder=buildByHolder)
+      finalSchema, readPartitionSchema(), options,  pushedFilters(),pushedAggregations,partitionFilters=partitionFilters,buildByHolder=buildByHolder)
   }
   protected var dataFilters = Seq.empty[Expression]
   protected var pushedDataFilters = Array.empty[Filter]

@@ -32,10 +32,10 @@ class LuceneRule extends Rule[LogicalPlan] with AliasHelper with PredicateHelper
       pushDownAggregates,
       buildScanWithPushedAggregate,
       pruneColumns)
-
-    pushdownRules.foldLeft(plan) { (newPlan, pushDownRule) =>
+    val rules=pushdownRules.foldLeft(plan) { (newPlan, pushDownRule) =>
       pushDownRule(newPlan)
     }
+    rules
   }
 
   //这里应该只对pushDownAgg
@@ -43,7 +43,7 @@ class LuceneRule extends Rule[LogicalPlan] with AliasHelper with PredicateHelper
     plan transform {
     case sr @ DataSourceV2ScanRelation(table:LuceneTable,scan:LuceneScan,_) if !scan.buildByHolder =>
       val r=DataSourceV2Relation(sr.table,sr.output,None,None,scan.options)
-      ScanBuilderHolder(r.output, r, table.newScanBuilder(scan.options,true))
+      ScanBuilderHolder(r.output, r, table.newScanBuilder(scan,true))
   }
   }
   def pushDownFilters(plan: LogicalPlan): LogicalPlan = plan.transform {

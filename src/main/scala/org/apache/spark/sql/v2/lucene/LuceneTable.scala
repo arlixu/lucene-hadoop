@@ -9,7 +9,7 @@ import org.apache.spark.sql.execution.datasources.v2.FileTable
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.seabow.spark.v2.lucene.{LuceneScanBuilder, LuceneUtils}
+import org.seabow.spark.v2.lucene.{LuceneScan, LuceneScanBuilder, LuceneUtils}
 
 case class LuceneTable(
                         name: String,
@@ -26,8 +26,8 @@ case class LuceneTable(
 
   override def newScanBuilder(options: CaseInsensitiveStringMap): ScanBuilder =
     new LuceneScanBuilder(sparkSession, fileIndex, schema, dataSchema, options)
-  def newScanBuilder(options: CaseInsensitiveStringMap,buildByHolder: Boolean): ScanBuilder =
-    new LuceneScanBuilder(sparkSession, fileIndex, schema, dataSchema, options,buildByHolder)
+  def newScanBuilder(oldScan:LuceneScan,buildByHolder: Boolean): ScanBuilder =
+    new LuceneScanBuilder(sparkSession, fileIndex, schema, dataSchema, oldScan.options,oldScan,buildByHolder)
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = null
 
