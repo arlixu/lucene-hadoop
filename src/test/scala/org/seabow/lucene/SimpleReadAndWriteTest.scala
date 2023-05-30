@@ -97,4 +97,15 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
     df.show(false)
   }
 
+  test("spark-sql"){
+    val df=spark.createDataFrame(expectedData_01,userDefinedSchema_01)
+    val ddl=df.schema.toDDL
+    val createDDL= s"create table test_table ($ddl) using lucene"
+    spark.sql(createDDL)
+    df.write.insertInto("test_table")
+  }
+  test("spark-sql select "){
+    val selectSql= s"select * from `lucene`.`spark-warehouse/test_table/`"
+    spark.sql(selectSql).show()
+  }
 }

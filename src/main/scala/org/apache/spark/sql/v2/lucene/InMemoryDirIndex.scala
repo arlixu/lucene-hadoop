@@ -133,7 +133,7 @@ class InMemoryDirIndex(
       () // for some reasons scalac 2.12 needs this; return type doesn't matter
     }
     val filter = FileInputFormat.getInputPathFilter(new JobConf(hadoopConf, this.getClass))
-    val discovered = InMemoryFileIndex.bulkListLeafFiles(
+    val discovered = InMemoryDirIndex.bulkListLeafFiles(
       pathsToFetch, hadoopConf, filter, sparkSession, areRootPaths = true)
     discovered.foreach { case (path, leafFiles) =>
       HiveCatalogMetrics.incrementFilesDiscovered(leafFiles.size)
@@ -249,7 +249,7 @@ class InMemoryDirIndex(
 
 }
 
-object InMemoryFileIndex extends Logging {
+object InMemoryDirIndex extends Logging {
 
   /** A serializable variant of HDFS's BlockLocation. */
   private case class SerializableBlockLocation(
