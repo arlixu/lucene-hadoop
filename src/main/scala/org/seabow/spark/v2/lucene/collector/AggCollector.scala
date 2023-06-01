@@ -42,27 +42,27 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
         groupBySchema(i).dataType match {
           case IntegerType|DateType =>
             val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedNumericDocValues]
-            if (docValues.advanceExact(doc)) {
+            if (docValues!=null && docValues.advanceExact(doc)) {
               result.setInt(i, docValues.nextValue().toInt)
             }
           case LongType|TimestampType =>
             val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedNumericDocValues]
-            if (docValues.advanceExact(doc)) {
+            if (docValues!=null && docValues.advanceExact(doc)) {
               result.setLong(i, docValues.nextValue())
             }
           case DoubleType =>
             val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedNumericDocValues]
-            if (docValues.advanceExact(doc)) {
+            if (docValues!=null && docValues.advanceExact(doc)) {
               result.setDouble(i, NumericUtils.sortableLongToDouble(docValues.nextValue()))
             }
           case FloatType =>
             val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedNumericDocValues]
-            if (docValues.advanceExact(doc)) {
+            if (docValues!=null && docValues.advanceExact(doc)) {
               result.setFloat(i, NumericUtils.sortableIntToFloat(docValues.nextValue().toInt))
             }
           case StringType =>
             val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedSetDocValues]
-            if (docValues.advanceExact(doc)) {
+            if (docValues!=null && docValues.advanceExact(doc)) {
               result.update(i, UTF8String.fromString(docValues.lookupOrd(docValues.nextOrd()).utf8ToString()))
             }
         }
@@ -76,19 +76,41 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
      }
       for (i <- 0 until agg.aggregateExpressions().length)
         agg.aggregateExpressions()(i) match {
-          case _:Count | _:CountStar =>
+          case _:CountStar =>
             val oldData = if (metricRow.isNullAt(i)) {
               0l
             } else {
               metricRow.getLong(i)
             }
             metricRow.setLong(i, oldData + 1)
+          case count:Count=>
+            val col = V2ColumnUtils.extractV2Column(count.column()).get
+            aggMetricSchema(i).dataType match {
+              case LongType|IntegerType|DoubleType|FloatType|DateType|TimestampType=>
+                val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
+                 if (metricRow.isNullAt(i)) {
+                  metricRow.setLong(i,0l)
+                 }
+                if (docValues!=null && docValues.advanceExact(doc)) {
+                    metricRow.setLong(i, metricRow.getLong(i)+1)
+                }
+                case _ =>
+                  val docValues = docValueMaps(col).asInstanceOf[SortedSetDocValues]
+                  if (metricRow.isNullAt(i)) {
+                    metricRow.setLong(i,0l)
+                  }
+                  if (docValues!=null && docValues.advanceExact(doc)) {
+                    metricRow.setLong(i, metricRow.getLong(i)+1)
+                  }
+
+            }
+
           case max: Max =>
             val col = V2ColumnUtils.extractV2Column(max.column()).get
             aggMetricSchema(i).dataType match {
               case LongType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setLong(i, docValues.nextValue())
                   } else {
@@ -97,7 +119,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case IntegerType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setInt(i, docValues.nextValue().toInt)
                   } else {
@@ -106,7 +128,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case DoubleType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setDouble(i, NumericUtils.sortableLongToDouble(docValues.nextValue()))
                   } else {
@@ -115,7 +137,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case FloatType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setFloat(i, NumericUtils.sortableIntToFloat(docValues.nextValue().toInt))
                   } else {
@@ -128,7 +150,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
             aggMetricSchema(i).dataType match {
               case LongType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setLong(i, docValues.nextValue())
                   } else {
@@ -137,7 +159,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case IntegerType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setInt(i, docValues.nextValue().toInt)
                   } else {
@@ -146,7 +168,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case DoubleType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setDouble(i, NumericUtils.sortableLongToDouble(docValues.nextValue()))
                   } else {
@@ -155,7 +177,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case FloatType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setFloat(i, NumericUtils.sortableIntToFloat(docValues.nextValue().toInt))
                   } else {
@@ -169,7 +191,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
             aggMetricSchema(i).dataType match {
               case LongType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setLong(i, docValues.nextValue())
                   } else {
@@ -178,7 +200,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case IntegerType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setInt(i, docValues.nextValue().toInt)
                   } else {
@@ -187,7 +209,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case DoubleType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setDouble(i, NumericUtils.sortableLongToDouble(docValues.nextValue()))
                   } else {
@@ -196,7 +218,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
                 }
               case FloatType =>
                 val docValues = docValueMaps(col).asInstanceOf[SortedNumericDocValues]
-                if (docValues.advanceExact(doc)) {
+                if (docValues!=null && docValues.advanceExact(doc)) {
                   if (metricRow.isNullAt(i)) {
                     metricRow.setFloat(i, NumericUtils.sortableIntToFloat(docValues.nextValue().toInt))
                   } else {

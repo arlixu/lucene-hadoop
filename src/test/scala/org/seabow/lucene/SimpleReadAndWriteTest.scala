@@ -1,16 +1,21 @@
 package org.seabow.lucene
 
+import com.github.mrpowers.spark.fast.tests.DatasetComparer
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.execution.ExtendedMode
 import org.apache.spark.sql.functions.{count, sum}
 import org.apache.spark.sql.lucene._
 import org.apache.spark.sql.types._
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.sql.{Date, Timestamp}
 import scala.collection.JavaConverters._
 
-class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionTestWrapper {
+class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionTestWrapper with DatasetComparer with BeforeAndAfterAll{
   val userDefinedSchema_01 = StructType(
     List(
       StructField("isDeleted",BooleanType,true),
@@ -27,85 +32,92 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
       StructField("StructInfo", StructType(Seq(
         StructField("name", StringType, true),
         StructField("age", IntegerType, true)
-      )), true)
+      )), true),
+      StructField("ImpDay", IntegerType, true),
     )
   )
   val expectedData_01 = List(
-    Row(false,Date.valueOf("2023-05-29"),Timestamp.valueOf("2023-05-29 00:00:01"),"CA869", "Phạm Uyển Trinh", null, null, 2200.01f, null, Array("1", "2", "3"), Map(), Row("John Doe", 30)),
-    Row(true,Date.valueOf("2023-05-29"), Timestamp.valueOf("2023-05-29 00:00:02"),"CA870", "Nguyễn Liên Thảo", null, null, 2000.02f, 1350.05d, Array("1", "2", "3"), null, Row("Jane Smith", 25)),
-    Row(false,Date.valueOf("2023-05-30"),Timestamp.valueOf("2023-05-30 00:00:01") ,"CA871", "Lê Thị Nga", 17000, null, null, null, Array("1", "2", "3"), Map("color" -> "yellow", "0.3" -> "1"), Row("David Johnson", 40)),
-    Row(false,Date.valueOf("2023-05-31"),Timestamp.valueOf("2023-05-31 00:00:01") ,"CA872", "Phan Tố Nga", null, null, 2000.02f, null, Array("1", "2", "3"), Map(), Row("Sarah Williams", 35)),
-    Row(false,Date.valueOf("2023-06-01"),Timestamp.valueOf("2023-06-01 00:00:01") ,"CA873", "Nguyễn Thị Teresa Teng", null, 132324l, 1200.03f, null, Array("1", "2", "3","4"), Map("color" -> "red", "0.5" -> "2"), Row("Michael Brown", 45))
+    Row(false,Date.valueOf("2023-05-29"),Timestamp.valueOf("2023-05-29 00:00:01"),"CA869", "Phạm Uyển Trinh", null, null, 2200.01f, null, Array("1", "2", "3"), Map(), Row("John Doe", 30),20230529),
+    Row(true,Date.valueOf("2023-05-29"), Timestamp.valueOf("2023-05-29 00:00:02"),"CA870", "Nguyễn Liên Thảo", null, null, 2000.02f, 1350.05d, Array("1", "2", "3"), null, Row("Jane Smith", 25),20230529),
+    Row(false,Date.valueOf("2023-05-30"),Timestamp.valueOf("2023-05-30 00:00:01") ,"CA871", "Lê Thị Nga", 17000, null, null, null, Array("1", "2", "3"), Map("color" -> "yellow", "0.3" -> "1"), Row("David Johnson", 40),20230530),
+    Row(false,Date.valueOf("2023-05-31"),Timestamp.valueOf("2023-05-31 00:00:01") ,"CA872", "Phan Tố Nga", null, null, 2000.02f, null, Array("1", "2", "3"), Map("color" -> "blue", "0.3" -> "1"), Row("Sarah Williams", 35),20230531),
+    Row(false,Date.valueOf("2023-06-01"),Timestamp.valueOf("2023-06-01 00:00:01") ,"CA873", "Nguyễn Thị Teresa Teng", null, 132324l, 1200.03f, 1350.06d, Array("1", "2", "3","4"), Map("color" -> "red", "0.5" -> "2"), Row("Michael Brown", 45),20230601)
   ).asJava
 
+  val testDF=spark.createDataFrame(expectedData_01,userDefinedSchema_01)
+  val hdfs=FileSystem.get(new Configuration)
 
-  test("write"){
-      val df=spark.createDataFrame(expectedData_01,userDefinedSchema_01)
-      df.write.mode("overwrite").lucene("spark_lucene/partition=1")
-  }
-
-  test("read"){
-    spark.read.format("lucene").load("spark_lucene").select("Timestamp").show(false)
+  test("writeAndRead"){
+     val expectedDF = testDF.orderBy("CustomerID")
+      val actualDF=spark.read.lucene("spark_lucene").orderBy("CustomerID")
+     assertSmallDatasetEquality(actualDF,expectedDF)
   }
 
   test("complexPushFilter"){
-   val df= spark.read.format("lucene").load("spark_lucene")
-//     .groupBy("`Map Info`.color").count()
-//     .filter("`Map Info`.color='red'")
-     .filter(" (Day>'2023-05-29' and array_contains(`Array Info`,'3') )")
-//     .filter("`Customer ID`='CA869'")
-//   val df= spark.read.format("orc").load("spark_orc").filter("infos.name='Michael Brown'")
-    df.printSchema()
+    val conditionExpr="`MapInfo`.color='red' and (Day>'2023-05-29' and array_contains(`ArrayInfo`,'3') )"
+   val actualDF= spark.read.lucene("spark_lucene").filter(conditionExpr).orderBy("CustomerID")
+   val expectedDF= testDF.filter(conditionExpr).orderBy("CustomerID")
+    assertSmallDatasetEquality(actualDF,expectedDF)
+    val expainString= actualDF.queryExecution.explainString(ExtendedMode)
+    val shouldContainsStr = "IsNotNull(Day), IsNotNull(MapInfo), EqualTo(MapInfo.color,red), GreaterThan(Day,2023-05-29), EqualTo(ArrayInfo,3)"
 
-    df.explain(true)
-    df.show(false)
+    val pushedFiltersRegex = "PushedFilters:\\s*\\[(.*?)\\]".r
+    val pushedFiltersMatch = pushedFiltersRegex.findFirstMatchIn(expainString)
+    val pushedFilters = pushedFiltersMatch.map(_.group(1)).getOrElse("")
+    val containsAllSubstrings = shouldContainsStr.split(", ").forall(substring => pushedFilters.contains(substring.trim))
+    assert(containsAllSubstrings)
+
   }
 
-  test("complexPushFilter map"){
-    val df= spark.read.format("lucene").load("spark_lucene")
-      //     .groupBy("`Map Info`.color").count()
-      //     .filter("`Map Info`.color='red'")
-      .filter(" `Map Info`.`0.5`='2'")
-    //     .filter("`Customer ID`='CA869'")
-    //   val df= spark.read.format("orc").load("spark_orc").filter("infos.name='Michael Brown'")
-    df.printSchema()
 
-    df.explain(true)
-    df.show(false)
-  }
+  test("complexPushAgg"){
 
-  test("complexPushFilter count"){
-
-    val df= spark.read.format("lucene").load("spark_lucene").groupBy("Array Info").agg(
-      count("Extra Option 3")
-      , sum("Extra Option 3")
-//      ,avg("Extra Option 3")
-    )
-      //     .filter("`Map Info`.color='red'")
-//      .groupBy().sum("Day")
-    //     .filter("`Customer ID`='CA869'")
-    //   val df= spark.read.format("orc").load("spark_orc").filter("infos.name='Michael Brown'")
-    df.printSchema()
-
-//    df.explain(true)
-    df.show(false)
+    val actualDF= spark.read.lucene("spark_lucene").groupBy("MapInfo.`color`").agg(
+      count("ExtraOption3").as("cnt")
+      , sum("ExtraOption3")).orderBy("color")
+    val expectedDF=testDF.groupBy("MapInfo.`color`").agg(
+      count("ExtraOption3").as("cnt")
+      , sum("ExtraOption3")).orderBy("color")
+    assertSmallDatasetEquality(actualDF,expectedDF)
+    val expainString= actualDF.queryExecution.explainString(ExtendedMode)
+    val shouldContainsStr="PushedAggregation:[Count(ExtraOption3), Sum(ExtraOption3)],PushedGroupBy:[MapInfo.color]"
+    assert(expainString.contains(shouldContainsStr))
   }
 
   test("partition purge"){
-    val df= spark.read.format("lucene").load("spark_lucene").filter("partition=2")
-    df.explain(true)
-    df.show(false)
+    val actualDF= spark.read.lucene("spark_lucene").filter("ImpDay=20230529").orderBy("CustomerID")
+    val expectedDF=testDF.filter("ImpDay=20230529").orderBy("CustomerID")
+    assertSmallDatasetEquality(actualDF, expectedDF)
   }
 
-  test("spark-sql"){
-    val df=spark.createDataFrame(expectedData_01,userDefinedSchema_01)
-    val ddl=df.schema.toDDL
+  test("spark-sql create and read"){
+    val ddl=testDF.schema.toDDL
     val createDDL= s"create table test_table ($ddl) using lucene"
     spark.sql(createDDL)
-    df.write.insertInto("test_table")
+    testDF.write.insertInto("test_table")
+    val conditionExpr="`MapInfo`.color='red' and (Day>'2023-05-29' and array_contains(`ArrayInfo`,'3') )"
+    val selectSql= s"select * from `lucene`.`spark-warehouse/test_table/` where $conditionExpr"
+    val actualDF=spark.sql(selectSql).orderBy("CustomerID")
+    val expectedDF=testDF.filter(conditionExpr).orderBy("CustomerID")
+    assertSmallDatasetEquality(actualDF, expectedDF)
   }
-  test("spark-sql select "){
-    val selectSql= s"select count(*) from `lucene`.`spark-warehouse/test_table/` where `Map Info`.`0.5`='2' and Day>'2023-05-29'"
-    spark.sql(selectSql).explain(true)
+
+  def clearData = {
+    hdfs.delete(new Path("spark-warehouse"), true)
+    hdfs.delete(new Path("spark-lucene"), true)
   }
+
+
+  override def beforeAll(){
+     println("beforeAll")
+    clearData
+    testDF.write.mode("overwrite").partitionBy("ImpDay").lucene("spark_lucene")
+  }
+
+  override def afterAll(): Unit ={
+    println("afterAll")
+    clearData
+
+  }
+
 }

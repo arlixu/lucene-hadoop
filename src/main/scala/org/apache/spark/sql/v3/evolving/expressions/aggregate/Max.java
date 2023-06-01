@@ -19,6 +19,7 @@ package org.apache.spark.sql.v3.evolving.expressions.aggregate;
 
 import org.apache.spark.annotation.Evolving;
 import org.apache.spark.sql.v3.evolving.expressions.V2Expression;
+import org.apache.spark.sql.v3.evolving.util.V2ColumnUtils;
 
 /**
  * An aggregate function that returns the maximum value in a group.
@@ -35,4 +36,6 @@ public final class Max implements AggregateFunc {
 
   @Override
   public V2Expression[] children() { return new V2Expression[]{ input }; }
+  @Override
+  public String toString() { return this.getClass().getSimpleName()+"("+ V2ColumnUtils.extractV2Column(input).get() +")"; }
 }

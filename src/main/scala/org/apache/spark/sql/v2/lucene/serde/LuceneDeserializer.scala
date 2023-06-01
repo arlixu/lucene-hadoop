@@ -3,7 +3,7 @@ package org.apache.spark.sql.v2.lucene.serde
 import org.apache.lucene.document.Document
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.SpecificInternalRow
-import org.apache.spark.sql.catalyst.json.{CreateJacksonParser, JSONOptions, JacksonParser}
+import org.apache.spark.sql.catalyst.json.{JSONOptions, JacksonParser}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.v2.lucene.serde.avro.StoreFieldAvroReader
@@ -26,7 +26,6 @@ class LuceneDeserializer(dataSchema: StructType,
       case _=>None
     }
   }
-  val createParser = CreateJacksonParser.utf8String _
   val storeFieldAvroReader=StoreFieldAvroReader(dataSchema,requiredSchema)
 
   def deserialize(doc: Document): InternalRow = {

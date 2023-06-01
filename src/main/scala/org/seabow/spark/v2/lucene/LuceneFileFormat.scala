@@ -69,11 +69,12 @@ class LuceneFileFormat extends FileFormat with DataSourceRegister {
   }
 
   override def shortName(): String = "lucene"
+  override def toString: String = "LUCENE"
 
   /*
   We need this class for writing only, thus reader is not implemented
    */
-  override protected def buildReader(
+  override def buildReaderWithPartitionValues(
                                       sparkSession: SparkSession,
                                       dataSchema: StructType,
                                       partitionSchema: StructType,
@@ -93,8 +94,8 @@ class LuceneFileFormat extends FileFormat with DataSourceRegister {
       var currentPage = 1
       var pagingCollector = new PagingCollector(currentPage, Int.MaxValue)
       searcher.search(query, pagingCollector)
-      var docs = pagingCollector.docs
-      docs.map(doc => deserializer.deserialize(searcher.doc(doc))).iterator
+      var docIterator = pagingCollector.docs.iterator
+      docIterator.map{doc =>deserializer.deserialize(searcher.doc(doc))}
     }
   }
 

@@ -19,10 +19,12 @@ package org.apache.spark.sql.v3.evolving.util
 
 import org.apache.spark.sql.connector.expressions.{Expression, NamedReference}
 import org.apache.spark.sql.connector.catalog.CatalogV2Implicits.NamespaceHelper
+import org.apache.spark.sql.v3.evolving.expressions.V2FieldReference
 
 object V2ColumnUtils {
   def extractV2Column(expr: Expression): Option[String] = expr match {
     case r: NamedReference if r. fieldNames.length >= 1 => Some(r.fieldNames.quoted)
+    case r: V2FieldReference if r. fieldNames.length >= 1 => Some(r.fieldNames.quoted)
     case _ => None
   }
 }
