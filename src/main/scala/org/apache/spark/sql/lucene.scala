@@ -10,7 +10,7 @@ object lucene {
   }
 
   implicit class LuceneReader(dataFrameReader: DataFrameReader) {
-    def lucene(path: String): Unit = {
+    def lucene(path: String): DataFrame = {
       dataFrameReader.format("lucene").load(path)
     }
   }
