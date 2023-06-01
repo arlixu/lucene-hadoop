@@ -29,7 +29,11 @@
         </repository>
     </distributionManagement>
     <dependencies>
-
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-avro_2.12</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>

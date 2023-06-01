@@ -11,14 +11,11 @@ import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 import org.apache.lucene.util.{BytesRef, NumericUtils}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.SpecializedGetters
-import org.apache.spark.sql.catalyst.json.{JSONOptions, JacksonGenerator}
 import org.apache.spark.sql.connector.catalog.CatalogV2Implicits.NamespaceHelper
 import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.types.UTF8String
+import org.apache.spark.sql.v2.lucene.serde.avro.StoreFieldAvroWriter
 import org.seabow.HdfsDirectory
 import org.seabow.spark.v2.lucene.LuceneOptions
-
-import java.io.CharArrayWriter
 
 class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Configuration, val options: LuceneOptions) {
   val dirPath=s"$path.dir"
@@ -57,30 +54,7 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
     }
   }
 
-
-  val charArrayWriter = new CharArrayWriter()
-   val jsonGens:Seq[Option[JacksonGenerator]]= dataSchema.map{
-      structField=> structField.dataType match {
-        case ArrayType(elementType, _)=>
-          Some(new JacksonGenerator(
-            structField.dataType, charArrayWriter, new JSONOptions(Map.empty, options.zoneId.toString)))
-        case MapType(keyType, valueType, _)=>
-          Some(new JacksonGenerator(
-            structField.dataType, charArrayWriter, new JSONOptions(Map.empty, options.zoneId.toString)))
-        case StructType(fields)=>
-          Some(new JacksonGenerator(
-            structField.dataType, charArrayWriter, new JSONOptions(Map.empty, options.zoneId.toString)))
-        case _=>None
-      }
-    }
-
-  def getAndReset(gen:JacksonGenerator): UTF8String = {
-    gen.flush()
-    val json = charArrayWriter.toString
-    charArrayWriter.reset()
-    UTF8String.fromString(json)
-  }
-
+   val storeFieldAvroWriter=StoreFieldAvroWriter(dataSchema)
 
   private type ValueConverter = (SpecializedGetters, Int,Document) => Unit
   private val valueConverters: Array[ValueConverter] = dataSchema.map(makeConverter(_)).toArray
@@ -93,49 +67,30 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
           val intValue= if(row.getBoolean(ordinal)) 1 else 0
           doc.add(new IntPoint(structField.name, row.getInt(ordinal)))
           doc.add(new SortedNumericDocValuesField(structField.name,intValue))
-          if(isRoot){
-            doc.add(new StoredField(structField.name, intValue))
-          }
         }
     case IntegerType =>
       (row: SpecializedGetters, ordinal: Int, doc: Document) => {
         doc.add(new IntPoint(structField.name, row.getInt(ordinal)))
         doc.add(new SortedNumericDocValuesField(structField.name, row.getInt(ordinal).toLong))
-        if(isRoot){
-          doc.add(new StoredField(structField.name, row.getInt(ordinal)))
-        }
       }
     case LongType =>
       (row: SpecializedGetters, ordinal: Int, doc: Document) => {
         doc.add(new LongPoint(structField.name, row.getLong(ordinal)))
         doc.add(new SortedNumericDocValuesField(structField.name, row.getLong(ordinal)))
-        if(isRoot) {
-          doc.add(new StoredField(structField.name, row.getLong(ordinal)))
-        }
       }
     case FloatType =>
       (row: SpecializedGetters, ordinal: Int, doc: Document) => {
         doc.add(new FloatPoint(structField.name, row.getFloat(ordinal)))
         doc.add(new SortedNumericDocValuesField(structField.name, NumericUtils.floatToSortableInt( row.getFloat(ordinal))))
-        if(isRoot) {
-          doc.add(new StoredField(structField.name, row.getFloat(ordinal)))
-        }
       }
     case DoubleType =>
       (row: SpecializedGetters, ordinal: Int, doc: Document) => {
         doc.add(new DoublePoint(structField.name, row.getDouble(ordinal)))
         doc.add(new SortedNumericDocValuesField(structField.name, NumericUtils.doubleToSortableLong(row.getDouble(ordinal))))
-        if(isRoot) {
-          doc.add(new StoredField(structField.name, row.getDouble(ordinal)))
-        }
       }
     case StringType =>
       (row: SpecializedGetters, ordinal: Int, doc: Document) => {
-        var isStore=Field.Store.YES
-        if(!isRoot){
-          isStore=Field.Store.NO
-        }
-        doc.add(new StringField(structField.name, row. getUTF8String(ordinal).toString, isStore))
+        doc.add(new StringField(structField.name, row. getUTF8String(ordinal).toString, Field.Store.NO))
         doc.add(new SortedSetDocValuesField(structField.name, new BytesRef(row.getUTF8String(ordinal).toString)))
       }
     case DateType =>
@@ -143,18 +98,12 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
         val days=row.getInt(ordinal)
         doc.add(new IntPoint(structField.name, days))
         doc.add(new SortedNumericDocValuesField(structField.name, days.toLong))
-        if(isRoot) {
-          doc.add(new StoredField(structField.name, days))
-        }
       }
     case TimestampType =>
       (row: SpecializedGetters, ordinal: Int, doc: Document) => {
         val timestamp=row.getLong(ordinal)
         doc.add(new LongPoint(structField.name, timestamp))
         doc.add(new SortedNumericDocValuesField(structField.name, timestamp))
-        if(isRoot) {
-          doc.add(new StoredField(structField.name,timestamp))
-        }
       }
     case ArrayType(elementType, _) => (row: SpecializedGetters, ordinal: Int, doc: Document)  =>{
       // Need to put all converted values to a list, can't reuse object.
@@ -166,12 +115,6 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
           elementConverter(array, i, doc)
           }
         i += 1
-      }
-      if(isRoot){
-        val jsonGenerator=jsonGens(ordinal).get
-        jsonGenerator.write(array)
-        val json=getAndReset(jsonGenerator)
-        doc.add(new StoredField(structField.name,json.toString))
       }
     }
 
@@ -189,12 +132,6 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
         }
         i += 1
       }
-      if(isRoot){
-        val jsonGenerator=jsonGens(ordinal).get
-        jsonGenerator.write(map)
-        val json=getAndReset(jsonGenerator)
-        doc.add(new StoredField(structField.name,json.toString))
-      }
     }
     case st: StructType =>  (row: SpecializedGetters, ordinal: Int, doc: Document) =>{
       val struct= row.getStruct(ordinal,st.size)
@@ -207,12 +144,6 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
         }
         i += 1
       }
-      if(isRoot){
-        val jsonGenerator=jsonGens(ordinal).get
-        jsonGenerator.write(struct)
-        val json=getAndReset(jsonGenerator)
-        doc.add(new StoredField(structField.name,json.toString))
-      }
     }
 
     case _ => throw new RuntimeException(s"Unsupported type: ${structField.dataType.typeName}")
@@ -221,6 +152,7 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
 
   def write(row: InternalRow): Unit = {
     val doc = new Document
+    doc.add(new StoredField("_source",new BytesRef(storeFieldAvroWriter.getAndReset(row))))
     for (idx <- 0 until row.numFields) {
       if (!row.isNullAt(idx)) {
         valueConverters(idx)(row, idx, doc)
@@ -231,10 +163,6 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
   }
 
   def close(): Unit = {
-    jsonGens.filter(!_.isEmpty).foreach{
-      _.get.close()
-    }
-    charArrayWriter.close()
     writer.flush()
     writer.commit()
 //    writer.close()

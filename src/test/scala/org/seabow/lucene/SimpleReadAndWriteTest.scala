@@ -16,15 +16,15 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
       StructField("isDeleted",BooleanType,true),
       StructField("Day", DateType, true),
       StructField("Timestamp", TimestampType, true),
-      StructField("Customer ID", StringType, true),
-      StructField("Customer Name", StringType, true),
-      StructField("Standard Package", IntegerType, true),
-      StructField("Extra Option 1", LongType, true),
-      StructField("Extra Option 2", FloatType, true),
-      StructField("Extra Option 3", DoubleType, true),
-      StructField("Array Info", ArrayType(StringType), true),
-      StructField("Map Info", MapType(StringType, StringType), true),
-      StructField("Struct Info", StructType(Seq(
+      StructField("CustomerID", StringType, true),
+      StructField("CustomerName", StringType, true),
+      StructField("StandardPackage", IntegerType, true),
+      StructField("ExtraOption1", LongType, true),
+      StructField("ExtraOption2", FloatType, true),
+      StructField("ExtraOption3", DoubleType, true),
+      StructField("ArrayInfo", ArrayType(StringType), true),
+      StructField("MapInfo", MapType(StringType, StringType), true),
+      StructField("StructInfo", StructType(Seq(
         StructField("name", StringType, true),
         StructField("age", IntegerType, true)
       )), true)
