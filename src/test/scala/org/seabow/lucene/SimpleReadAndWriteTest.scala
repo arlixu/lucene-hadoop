@@ -104,7 +104,7 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
 
   def clearData = {
     hdfs.delete(new Path("spark-warehouse"), true)
-    hdfs.delete(new Path("spark-lucene"), true)
+    hdfs.delete(new Path("spark_lucene"), true)
   }
 
 
