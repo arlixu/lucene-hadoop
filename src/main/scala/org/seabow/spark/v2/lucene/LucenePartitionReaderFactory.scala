@@ -38,7 +38,6 @@ case class LucenePartitionReaderFactory(
 
     val filePath=new Path(new URI(file.filePath+".dir"))
    val searcher=LuceneSearcherCache.getSearcherInstance(filePath,conf)
-    //todo 这里需要通过pushedFilters来转query。
     val query = LuceneFilters.createFilter(dataSchema,filters)
 
     val deserializer=new LuceneDeserializer(dataSchema,readDataSchema,SQLConf.get.getConf(SQLConf.SESSION_LOCAL_TIMEZONE))
@@ -110,7 +109,6 @@ case class LucenePartitionReaderFactory(
     val filePath=new Path(new URI(file.filePath))
     val searcher=LuceneSearcherCache.getSearcherInstance(filePath,conf)
 
-    //todo 这里需要通过pushedFilters来转query。
     val query = LuceneFilters.createFilter(dataSchema,filters)
     var internalRows=LuceneAggUtils.createAggInternalRows(aggregation.get,searcher,query,dataSchema,readDataSchema,partitionSchema).iterator
     val fileReader= new PartitionReader[InternalRow] {
