@@ -45,7 +45,7 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
   }
 
   test("read"){
-    spark.read.format("lucene").load("spark_lucene").show(false)
+    spark.read.format("lucene").load("spark_lucene").select("Timestamp").show(false)
   }
 
   test("complexPushFilter"){

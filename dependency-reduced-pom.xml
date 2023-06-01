@@ -233,10 +233,6 @@
           <groupId>org.scala-lang.modules</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>scala-library</artifactId>
-          <groupId>org.scala-lang</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>scala-reflect</artifactId>
           <groupId>org.scala-lang</groupId>
         </exclusion>
@@ -321,16 +317,8 @@
           <groupId>net.sf.py4j</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>spark-tags_2.12</artifactId>
-          <groupId>org.apache.spark</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>commons-crypto</artifactId>
           <groupId>org.apache.commons</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>unused</artifactId>
-          <groupId>org.spark-project.spark</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -369,20 +357,12 @@
           <groupId>org.apache.parquet</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>spark-tags_2.12</artifactId>
-          <groupId>org.apache.spark</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>jackson-databind</artifactId>
           <groupId>com.fasterxml.jackson.core</groupId>
         </exclusion>
         <exclusion>
           <artifactId>xbean-asm7-shaded</artifactId>
           <groupId>org.apache.xbean</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>unused</artifactId>
-          <groupId>org.spark-project.spark</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -431,14 +411,6 @@
         <exclusion>
           <artifactId>univocity-parsers</artifactId>
           <groupId>com.univocity</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>spark-tags_2.12</artifactId>
-          <groupId>org.apache.spark</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>unused</artifactId>
-          <groupId>org.spark-project.spark</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -719,10 +691,6 @@
         <exclusion>
           <artifactId>scalatest-mustmatchers_2.12</artifactId>
           <groupId>org.scalatest</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>scala-library</artifactId>
-          <groupId>org.scala-lang</groupId>
         </exclusion>
         <exclusion>
           <artifactId>scala-reflect</artifactId>

@@ -106,9 +106,8 @@ case class LucenePartitionReaderFactory(
 
   def buildReaderWithAggregation(file: PartitionedFile,
                                  conf: Configuration):PartitionReader[InternalRow] ={
-    val filePath=new Path(new URI(file.filePath))
+    val filePath=new Path(new URI(file.filePath+".dir"))
     val searcher=LuceneSearcherCache.getSearcherInstance(filePath,conf)
-
     val query = LuceneFilters.createFilter(dataSchema,filters)
     var internalRows=LuceneAggUtils.createAggInternalRows(aggregation.get,searcher,query,dataSchema,readDataSchema,partitionSchema).iterator
     val fileReader= new PartitionReader[InternalRow] {
