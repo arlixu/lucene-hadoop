@@ -188,6 +188,9 @@ object LuceneFilters {
 
   private def equalToQuery(nameTypeMap: Map[String,DataType], attr: String, value: Any): Query = {
     val query = attrDataType(attr,nameTypeMap) match {
+      case BooleanType=>
+        val intValue= if(value.asInstanceOf[Boolean]) 1 else 0
+        IntPoint.newExactQuery(attr,intValue)
       case IntegerType =>
         IntPoint.newExactQuery(attr, value.asInstanceOf[Int])
       case DateType=>

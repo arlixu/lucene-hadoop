@@ -40,6 +40,11 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
       //group by agg
       for (i <- 0 until (groupBySchema.length)) {
         groupBySchema(i).dataType match {
+          case BooleanType=>
+            val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedNumericDocValues]
+            if (docValues!=null && docValues.advanceExact(doc)) {
+              result.setBoolean(i, docValues.nextValue().toInt>0)
+            }
           case IntegerType|DateType =>
             val docValues = docValueMaps(groupBySchema(i).name).asInstanceOf[SortedNumericDocValues]
             if (docValues!=null && docValues.advanceExact(doc)) {

@@ -127,8 +127,10 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
       while (i < length) {
         val key=keys.get(i,keyType)
         if(!values.isNullAt(i)){
-         val kvConverter= makeConverter(StructField(Array(structField.name,key.toString).quoted, valueType, nullable = true),false)
+          val kName=Array(structField.name,key.toString).quoted
+         val kvConverter= makeConverter(StructField(kName, valueType, nullable = true),false)
           kvConverter(values,i,doc)
+          doc.add(new StringField( "_field_names",kName, Field.Store.NO))
         }
         i += 1
       }
@@ -139,8 +141,10 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
       var i = 0
       while (i < numFields) {
         if (!struct.isNullAt(i)) {
-          val structConverter= makeConverter(StructField(Array(structField.name,st(i).name).quoted, st(i).dataType, nullable = true),false)
+          val subFieldName=Array(structField.name,st(i).name).quoted
+          val structConverter= makeConverter(StructField(subFieldName, st(i).dataType, nullable = true),false)
           structConverter(struct,i,doc)
+          doc.add(new StringField( "_field_names",subFieldName, Field.Store.NO))
         }
         i += 1
       }
