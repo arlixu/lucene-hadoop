@@ -1,4 +1,5 @@
 package org.apache.spark.sql
+import org.apache.spark.sql.types._
 
 object lucene {
   val LUCENE_FILE_SUFFIX = ".lucene"

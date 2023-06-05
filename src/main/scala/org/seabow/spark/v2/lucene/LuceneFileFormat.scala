@@ -28,6 +28,7 @@ import org.apache.spark.sql.sources.{DataSourceRegister, Filter}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.v2.lucene.LuceneFilters
 import org.apache.spark.sql.v2.lucene.serde.LuceneDeserializer
+import org.apache.spark.sql.v2.lucene.util.LuceneUtils
 import org.apache.spark.util.SerializableConfiguration
 import org.seabow.spark.v2.lucene.cache.LuceneSearcherCache
 import org.seabow.spark.v2.lucene.collector.PagingCollector
@@ -52,7 +53,7 @@ class LuceneFileFormat extends FileFormat with DataSourceRegister {
                              options: Map[String, String],
                              dataSchema: StructType
                            ): OutputWriterFactory = {
-    val LuceneOptions = new LuceneOptions(options, sparkSession.conf.get("spark.sql.session.timeZone"))
+    val LuceneOptions = new LuceneOptions(options, sparkSession.sessionState.conf)
 
     new OutputWriterFactory {
       override def newInstance(path: String, dataSchema: StructType, context: TaskAttemptContext): OutputWriter = {

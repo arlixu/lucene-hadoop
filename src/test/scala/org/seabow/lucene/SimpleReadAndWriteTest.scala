@@ -102,6 +102,12 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
     assertSmallDatasetEquality(actualDF, expectedDF)
   }
 
+  test("test group by array"){
+    val df=spark.read.option("enforceFacetSchema","true").lucene("spark_lucene").groupBy("ArrayInfo").count()
+    df.explain(true)
+    df.show()
+  }
+
   def clearData = {
     hdfs.delete(new Path("spark-warehouse"), true)
     hdfs.delete(new Path("spark_lucene"), true)
