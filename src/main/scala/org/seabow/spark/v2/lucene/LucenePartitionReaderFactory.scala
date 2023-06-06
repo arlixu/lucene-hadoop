@@ -109,7 +109,7 @@ case class LucenePartitionReaderFactory(
     val filePath=new Path(new URI(file.filePath+".dir"))
     val searcher=LuceneSearcherCache.getSearcherInstance(filePath,conf)
     val query = LuceneFilters.createFilter(dataSchema,filters)
-    var internalRows=LuceneAggUtils.createAggInternalRows(aggregation.get,searcher,query,dataSchema,readDataSchema,partitionSchema).iterator
+    var internalRows=LuceneAggUtils.createAggInternalRows(aggregation.get,searcher,query,dataSchema,readDataSchema,partitionSchema,conf).iterator
     val fileReader= new PartitionReader[InternalRow] {
       override def next(): Boolean = {
         internalRows.hasNext

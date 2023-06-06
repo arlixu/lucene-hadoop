@@ -60,7 +60,7 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
   private val valueConverters: Array[ValueConverter] = dataSchema.map(makeConverter(_)).toArray
 
 
-  private def makeConverter(structField: StructField,isRoot:Boolean=true): ValueConverter = {
+  private def makeConverter(structField: StructField): ValueConverter = {
     structField.dataType match {
     case BooleanType=>
         (row: SpecializedGetters, ordinal: Int, doc: Document) => {
@@ -111,7 +111,7 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
       var i = 0
       while (i < array.numElements()) {
         if (!array.isNullAt(i)) {
-          val elementConverter = makeConverter(StructField(structField.name, elementType, nullable = true),false)
+          val elementConverter = makeConverter(StructField(structField.name, elementType, nullable = true))
           elementConverter(array, i, doc)
           }
         i += 1
@@ -128,7 +128,7 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
         val key=keys.get(i,keyType)
         if(!values.isNullAt(i)){
           val kName=Array(structField.name,key.toString).quoted
-         val kvConverter= makeConverter(StructField(kName, valueType, nullable = true),false)
+         val kvConverter= makeConverter(StructField(kName, valueType, nullable = true))
           kvConverter(values,i,doc)
           doc.add(new StringField( "_field_names",kName, Field.Store.NO))
         }
@@ -142,7 +142,7 @@ class LuceneGenerator(val path: String, val dataSchema: StructType, val conf: Co
       while (i < numFields) {
         if (!struct.isNullAt(i)) {
           val subFieldName=Array(structField.name,st(i).name).quoted
-          val structConverter= makeConverter(StructField(subFieldName, st(i).dataType, nullable = true),false)
+          val structConverter= makeConverter(StructField(subFieldName, st(i).dataType, nullable = true))
           structConverter(struct,i,doc)
           doc.add(new StringField( "_field_names",subFieldName, Field.Store.NO))
         }
