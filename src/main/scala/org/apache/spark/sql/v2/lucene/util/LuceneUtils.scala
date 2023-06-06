@@ -41,8 +41,8 @@ object LuceneUtils {
   def arrayToAtomicType(dataType: DataType): DataType = dataType match {
     case arrayType: ArrayType if arrayType.elementType.isInstanceOf[AtomicType] =>
       arrayType.elementType.asInstanceOf[AtomicType]
-    case mapType: MapType if mapType.valueType.isInstanceOf[AtomicType] =>
-      mapType.valueType.asInstanceOf[AtomicType]
+    case mapType @ MapType(keyType,valueType:ArrayType,_) if valueType.elementType.isInstanceOf[AtomicType] =>
+      mapType.copy(keyType,valueType.elementType.asInstanceOf[AtomicType])
     case structType: StructType =>
       val fields = structType.fields.map(field => field.copy(dataType = arrayToAtomicType(field.dataType)))
       StructType(fields)
