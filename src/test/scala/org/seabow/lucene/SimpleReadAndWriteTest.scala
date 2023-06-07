@@ -6,7 +6,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.execution.ExtendedMode
-import org.apache.spark.sql.functions.{count, sum}
+import org.apache.spark.sql.functions.{col, count, explode_outer, sum}
 import org.apache.spark.sql.lucene._
 import org.apache.spark.sql.types._
 import org.scalatest.BeforeAndAfterAll
@@ -29,19 +29,32 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
       StructField("ExtraOption3", DoubleType, true),
       StructField("ArrayInfo", ArrayType(StringType), true),
       StructField("MapInfo", MapType(StringType, StringType), true),
+      StructField("MapArray", MapType(StringType, ArrayType(StringType)), true),
       StructField("StructInfo", StructType(Seq(
         StructField("name", StringType, true),
-        StructField("age", IntegerType, true)
+        StructField("age", IntegerType, true),
+        StructField("map_tags",ArrayType(StringType),true)
       )), true),
       StructField("ImpDay", IntegerType, true),
     )
   )
   val expectedData_01 = List(
-    Row(false,Date.valueOf("2023-05-29"),Timestamp.valueOf("2023-05-29 00:00:01"),"CA869", "Phạm Uyển Trinh", null, null, 2200.01f, null, Array("1", "2", "3"), Map(), Row("John Doe", 30),20230529),
-    Row(true,Date.valueOf("2023-05-29"), Timestamp.valueOf("2023-05-29 00:00:02"),"CA870", "Nguyễn Liên Thảo", null, null, 2000.02f, 1350.05d, Array("1", "2", "3"), null, Row("Jane Smith", 25),20230529),
-    Row(false,Date.valueOf("2023-05-30"),Timestamp.valueOf("2023-05-30 00:00:01") ,"CA871", "Lê Thị Nga", 17000, null, null, null, Array("1", "2", "3"), Map("color" -> "yellow", "0.3" -> "1"), Row("David Johnson", 40),20230530),
-    Row(false,Date.valueOf("2023-05-31"),Timestamp.valueOf("2023-05-31 00:00:01") ,"CA872", "Phan Tố Nga", null, null, 2000.02f, null, Array("1", "2", "3"), Map("color" -> "blue", "0.3" -> "1"), Row("Sarah Williams", 35),20230531),
-    Row(false,Date.valueOf("2023-06-01"),Timestamp.valueOf("2023-06-01 00:00:01") ,"CA873", "Nguyễn Thị Teresa Teng", null, 132324l, 1200.03f, 1350.06d, Array("1", "2", "3","4"), Map("color" -> "red", "0.5" -> "2"), Row("Michael Brown", 45),20230601)
+    Row(false,Date.valueOf("2023-05-29"),Timestamp.valueOf("2023-05-29 00:00:01"),
+      "CA869", "Phạm Uyển Trinh", null, null, 2200.01f, null, Array("1", "2", "3"),
+      Map(),Map("sport"->Array("football", "basketball")), Row("John Doe", 30,Array("football", "basketball")),20230529),
+    Row(true,Date.valueOf("2023-05-29"), Timestamp.valueOf("2023-05-29 00:00:02"),
+      "CA870", "Nguyễn Liên Thảo", null, null, 2000.02f, 1350.05d, Array("1", "2", "3"),
+      null,Map("sport"->Array("football")), Row("Jane Smith", 25,Array("football")),20230529),
+    Row(false,Date.valueOf("2023-05-30"),Timestamp.valueOf("2023-05-30 00:00:01") ,
+      "CA871", "Lê Thị Nga", 17000, null, null, null, Array("1", "2", "3"),
+      Map("color" -> "yellow", "0.3" -> "1"),Map("sport"->Array("football", "basketball", "tennis")), Row("David Johnson", 40,Array("football", "basketball", "tennis")),20230530),
+    Row(false,Date.valueOf("2023-05-31"),Timestamp.valueOf("2023-05-31 00:00:01") ,
+      "CA872", "Phan Tố Nga", null, null, 2000.02f, null, Array("1", "2", "3"),
+      Map("color" -> "blue", "0.3" -> "1"), Map(),Row("Sarah Williams", 35,Array()),20230531),
+    Row(false,Date.valueOf("2023-06-01"),Timestamp.valueOf("2023-06-01 00:00:01") ,
+      "CA873", "Nguyễn Thị Teresa Teng", null, 132324l, 1200.03f, 1350.06d,
+      Array("1", "2", "3","4"), Map("color" -> "red", "0.5" -> "2"),null,
+      Row("Michael Brown", 45,null),20230601)
   ).asJava
 
   val testDF=spark.createDataFrame(expectedData_01,userDefinedSchema_01)
@@ -102,10 +115,23 @@ class SimpleReadAndWriteTest extends AnyFunSuite with Logging with SparkSessionT
     assertSmallDatasetEquality(actualDF, expectedDF)
   }
 
-  test("test group by array"){
-    val df=spark.read.option("enforceFacetSchema","true").lucene("spark_lucene").groupBy("ArrayInfo").count()
-    df.explain(true)
-    df.show()
+  test("facet group by array"){
+    var actualDF=spark.read.option("enforceFacetSchema","true").lucene("spark_lucene").groupBy("ArrayInfo").count().orderBy("ArrayInfo")
+    val expectedDF = testDF.withColumn("ArrayInfo", explode_outer(col("ArrayInfo"))).groupBy("ArrayInfo").count().orderBy("ArrayInfo")
+    assertSmallDatasetEquality(actualDF,expectedDF)
+
+  }
+
+  test("facet group by map<x,array>"){
+    val actualDF=spark.read.option("enforceFacetSchema","true").lucene("spark_lucene").groupBy("MapArray.sport").count().orderBy("sport")
+    val expectedDF = testDF.withColumn("sport", explode_outer(col("MapArray.sport"))).groupBy("sport").count().orderBy("sport")
+    assertSmallDatasetEquality(actualDF,expectedDF)
+  }
+
+  test("facet group by struct<array>"){
+    val actualDF=spark.read.option("enforceFacetSchema","true").lucene("spark_lucene").groupBy("StructInfo.map_tags").count().orderBy("map_tags")
+    val expectedDF = testDF.withColumn("map_tags", explode_outer(col("StructInfo.map_tags"))).groupBy("map_tags").count().orderBy("map_tags")
+    assertSmallDatasetEquality(actualDF,expectedDF)
   }
 
   def clearData = {

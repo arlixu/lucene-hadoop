@@ -65,9 +65,10 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
       case StringType =>
         val docValues = docValueMaps(colName).asInstanceOf[SortedSetDocValues]
         if (docValues != null && docValues.advanceExact(doc)) {
-          for (j <- 0l until docValues.getValueCount()) yield {
-            UTF8String.fromString(docValues.lookupOrd(docValues.nextOrd()).utf8ToString())
-          }
+          val collection: Iterator[UTF8String] = Iterator.continually(docValues.nextOrd())
+            .takeWhile(_ != SortedSetDocValues.NO_MORE_ORDS)
+            .map(ordinal => UTF8String.fromString(docValues.lookupOrd(ordinal).utf8ToString()))
+          collection.toSeq
         } else {
           Seq.empty
         }
@@ -228,7 +229,7 @@ class AggCollector(agg: Aggregation, aggSchema: StructType, dataSchema: StructTy
         col.dataType match {
           case StringType =>
             (col.name, reader.getSortedSetDocValues(col.name))
-          case DoubleType | LongType | IntegerType | FloatType =>
+          case DoubleType | LongType | IntegerType | FloatType|DateType|TimestampType|BooleanType =>
             (col.name, reader.getSortedNumericDocValues(col.name))
           case _ =>
             (col.name, reader.getSortedSetDocValues(col.name))
