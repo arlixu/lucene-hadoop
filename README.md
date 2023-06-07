@@ -54,5 +54,58 @@ Of course you can also push filters for any other expression. e.g. `>`,`<`,`in`.
 3. Push down aggregation support for `count,max,min,sum` by lucene `DocValuesField`. (Due to the limitations of Spark 3.0.2, aggregation push down for `avg` is not supported.The alternative solution is to calculate the sum and count first, and then divide them.)  
 4. Prefer location implements for partition file.  
 When writing a dataframe as `lucene` format,each partition file will be written as a lucene index dir on hdfs,with a suffix `.lucene`.  
-Since opening an index in Lucene is a relatively expensive operation, we want to perform the index opening only when loading the Lucene-format data source for the first time. This requires ensuring that queries for the corresponding partition files are allocated to a fixed executor as much as possible.
+Since opening an index in Lucene is a relatively expensive operation, we want to perform the index opening only when loading the Lucene-format data source for the first time. This requires ensuring that queries for the corresponding partition files are allocated to a fixed executor as much as possible.  
+5. Support facets accelerate for arrayType<atomicTypes>.
+```
+spark.read.option("enforceFacetSchema","true").lucene("lucene_path").groupBy("ArrayInfo").count()
+```
+same as 
+```
+spark.read.orc("orc_path"
+).withColumn("ArrayInfo", explode_outer(col("ArrayInfo"))).groupBy("ArrayInfo").count()
+```
+but faster.
 
+## Performance Test Report
+Test Format : See RandomTestDataGenerator.scala
+Test Data Size: 100 million records
+Result Storage Format: ORC/Lucene file
+
+ORC Write Performance:
+- Duration: 53 seconds
+- File Size: 3.0GB
+
+Lucene Indexing Performance:
+- Duration: 139 seconds
+- Index Size: 13.9GB
+
+Conditional Query Tests:
+Condition: "array_contains(map_tags.`sports`, 'basketball')"
+
+| Storage Format | Query Result Count | Query 1 Duration (secs) | Query 2 Duration (secs) | Query 3 Duration (secs) |
+| -------------- | ----------------- | ---------------------- | ---------------------- | ---------------------- |
+| ORC            | 24,996,139        | 11                     | 12                     | 15                     |
+| Lucene         | 24,996,139        | 7                      | 2                      | 1                      |
+
+Condition: "map_tags['sports'] is not null"
+
+| Storage Format | Query Result Count | Query 1 Duration (secs) | Query 2 Duration (secs) | Query 3 Duration (secs) |
+| -------------- | ----------------- | ---------------------- | ---------------------- | ---------------------- |
+| ORC            | 49,950,531        | 16                     | 14                     | 12                     |
+| Lucene         | 49,950,531        | 19                     | 2                      | 2                      |
+
+Faceted Aggregation Test:
+
+| Storage Format | Aggregation Duration (secs) |
+| -------------- | -------------------------- |
+| ORC            | 26                         |
+| Lucene         | 8                          |
+
+Based on the test results, the following conclusions can be drawn:
+
+1. In the case of 100 million records, ORC demonstrates good write performance with a duration of 53 seconds and a file size of 3.0GB.
+2. Lucene indexing takes longer, with a duration of 139 seconds, and results in a relatively bigger index size of 13.9GB.
+3. For conditional queries, both ORC and Lucene are capable of quickly finding records that satisfy the given conditions. In terms of query performance, Lucene slightly outperforms ORC, especially in multiple query scenarios where Lucene exhibits faster response times.
+4. In terms of faceted aggregation, ORC performs well with a duration of 26 seconds, while Lucene achieves the aggregation in 8 seconds.
+
+In conclusion, the choice of data storage and query engine should be based on specific usage scenarios and requirements. ORC is suitable for storing and querying large-scale data efficiently, while Lucene is more suitable for multi-dimensional analysis and filtering scenarios.

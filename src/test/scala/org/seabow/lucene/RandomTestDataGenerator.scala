@@ -83,4 +83,19 @@ object RandomTestDataGenerator extends AnyFunSuite with SparkSessionTestWrapper{
     println("cost secs lucene read:"+cost)
   }
 
+  test("facet from orc/lucene"){
+    val condition="array_contains(map_tags.`sports`,'basketball')"
+//        val condition="map_tags['sports'] is not null"
+    var startTime = System.currentTimeMillis
+    spark.read.orc("compared_orc").filter(condition).selectExpr("map_tags.`art` as art").withColumn("art",explode_outer(col("art"))).groupBy("art").count().show
+    var endTime = System.currentTimeMillis
+    var cost=(endTime-startTime)/1000
+    println("cost secs orc read:"+cost)
+    startTime = System.currentTimeMillis
+    spark.read.option("enforceFacetSchema","true").lucene("compared_lucene").filter("map_tags.`sports`='basketball'").groupBy("map_tags.`art`").count().show
+    endTime = System.currentTimeMillis
+    cost=(endTime-startTime)/1000
+    println("cost secs lucene read:"+cost)
+  }
+
 }
