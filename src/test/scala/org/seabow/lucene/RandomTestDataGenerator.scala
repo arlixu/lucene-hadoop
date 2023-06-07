@@ -1,15 +1,19 @@
 package org.seabow.lucene
 
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.FileSystem
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.lucene._
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.util.Random
 
-object RandomTestDataGenerator extends AnyFunSuite with SparkSessionTestWrapper{
-  val numRecords = 100000000
+class RandomTestDataGenerator extends AnyFunSuite with SparkSessionTestWrapper with BeforeAndAfterAll{
+  val numRecords = 1000000
   val outputFilePath = "random_data_orc"
-  test("generate") {
+  val hdfs=FileSystem.get(new Configuration)
+  def generateRandom():Unit={
     // 创建Spark会话
     // 定义数据量和保存路径
     // 定义标签体系
@@ -53,10 +57,14 @@ object RandomTestDataGenerator extends AnyFunSuite with SparkSessionTestWrapper{
     dfWithMapTags.write.mode("overwrite").orc(outputFilePath)
   }
 
+  override def beforeAll(){
+//    generateRandom()
+  }
+
 
   test("write orc/lucene compared"){
     var startTime = System.currentTimeMillis
-    spark.read.orc(outputFilePath).write.orc("compared_orc")
+    spark.read.orc(outputFilePath).write.mode("overwrite").orc("compared_orc")
     var endTime = System.currentTimeMillis
     var cost=(endTime-startTime)/1000
     println("cost secs orc write:"+cost)
