@@ -1,6 +1,6 @@
 package org.seabow.spark.v2.lucene
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{SparkSession, SparkUtils}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.connector.read.{InputPartition, PartitionReaderFactory}
 import org.apache.spark.sql.execution.datasources.v2.FileScan
@@ -24,15 +24,16 @@ case class LuceneScan(
                        dataFilters: Seq[Expression] = Seq.empty,
                        var buildByHolder:Boolean=false) extends FileScan{
 
-  def getExecutorHosts():Seq[String]={
-    sparkSession.sparkContext.getExecutorMemoryStatus.keys.toSeq.map(_.split(":").head).sorted
+  def getExecutorLocations():Seq[String]={
+    val locations=SparkUtils.getExecutorLocations(sparkSession.sparkContext)
+    locations
   }
 
   def hashFunction(path: String, numExecutors: Int): Int = {
     val hashCode = path.hashCode() & Integer.MAX_VALUE // 使用路径的哈希码
     hashCode % numExecutors // 取模以得到执行器索引
   }
-  var executorHosts=getExecutorHosts()
+  var executorLocations=getExecutorLocations()
 
   override def withFilters(partitionFilters: Seq[Expression], dataFilters: Seq[Expression]): FileScan = {
     this.copy(partitionFilters = partitionFilters, dataFilters = dataFilters)
@@ -62,7 +63,7 @@ case class LuceneScan(
       p:FilePartition=>
        val locatedFiles= p.files.map{
           pf=>
-          PartitionedFile(pf.partitionValues,pf.filePath,pf.start,pf.length,Array(executorHosts(hashFunction(pf.filePath,executorHosts.size))))
+          PartitionedFile(pf.partitionValues,pf.filePath,pf.start,pf.length,Array(executorLocations(hashFunction(pf.filePath,executorLocations.size))))
         }
         FilePartition(p.index,locatedFiles)
     }.toArray
