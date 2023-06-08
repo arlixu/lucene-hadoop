@@ -40,7 +40,6 @@ object LuceneSearcherCache extends Logging {
       val executorId = sparkEnv.blockManager.blockManagerId.executorId
       val host = sparkEnv.blockManager.blockManagerId.host
       val location = ExecutorCacheTaskLocation(host, executorId)
-      println(s"location:$location")
       luceneCacheAccumulator.add(Map(filePath-> mutable.Set(location.toString())))
       return searcher
     }

@@ -112,10 +112,6 @@ case class LuceneScan(
 
   override def planInputPartitions(): Array[InputPartition] = {
     val executorCacheLocations = luceneCacheAccumulator.value
-    println("cache list:")
-    executorCacheLocations.foreach {
-      kv => println(s"${kv._1}=>${kv._2.mkString(",")}")
-    }
     val pp = partitions.map { p: FilePartition =>
       val locatedFiles = p.files.map { pf =>
         // 1. 尝试将文件分配到缓存节点
@@ -139,7 +135,6 @@ case class LuceneScan(
 class DirPartition(override val index: Int, override val  files: Array[PartitionedFile])
   extends FilePartition(index, files) {
   override def preferredLocations(): Array[String] = {
-    // Computes total number of bytes can be retrieved from each host.
    files.head.locations
   }
 }
