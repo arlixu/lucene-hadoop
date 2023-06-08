@@ -20,6 +20,7 @@ package org.seabow.spark.v2.lucene
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.mapreduce.{Job, TaskAttemptContext}
+import org.apache.spark.cache.LuceneSearcherCache
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.{FileFormat, OutputWriter, OutputWriterFactory, PartitionedFile}
@@ -30,7 +31,6 @@ import org.apache.spark.sql.v2.lucene.LuceneFilters
 import org.apache.spark.sql.v2.lucene.serde.LuceneDeserializer
 import org.apache.spark.sql.v2.lucene.util.LuceneUtils
 import org.apache.spark.util.SerializableConfiguration
-import org.seabow.spark.v2.lucene.cache.LuceneSearcherCache
 import org.seabow.spark.v2.lucene.collector.PagingCollector
 
 import java.net.URI
@@ -88,8 +88,7 @@ class LuceneFileFormat extends FileFormat with DataSourceRegister {
       sparkSession.sparkContext.broadcast(new SerializableConfiguration(hadoopConf))
     (file: PartitionedFile) => {
       val conf = broadcastedConf.value.value
-      val filePath = new Path(new URI(file.filePath+".dir"))
-      val searcher = LuceneSearcherCache.getSearcherInstance(filePath, conf)
+      val searcher = LuceneSearcherCache.getSearcherInstance(file.filePath, conf)
       val query = LuceneFilters.createFilter(dataSchema, filters)
       val deserializer = new LuceneDeserializer(dataSchema, requiredSchema, SQLConf.get.getConf(SQLConf.SESSION_LOCAL_TIMEZONE))
       var currentPage = 1

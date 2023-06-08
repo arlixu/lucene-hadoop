@@ -1,6 +1,7 @@
 package org.seabow.spark.v2.lucene
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.sql.{SparkSession, SparkUtils}
+import org.apache.spark.cache.LuceneSearcherCache
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.connector.read.{InputPartition, PartitionReaderFactory}
 import org.apache.spark.sql.execution.datasources.v2.FileScan
@@ -24,16 +25,12 @@ case class LuceneScan(
                        dataFilters: Seq[Expression] = Seq.empty,
                        var buildByHolder:Boolean=false) extends FileScan{
 
-  def getExecutorLocations():Seq[String]={
-    val locations=SparkUtils.getExecutorLocations(sparkSession.sparkContext)
-    locations
+  def registerLuceneCacheAccumulatorInstances(): Unit = {
+     if(!LuceneSearcherCache.luceneCacheAccumulator.isRegistered)
+       {
+         sparkSession.sparkContext.register(LuceneSearcherCache.luceneCacheAccumulator, "luceneCacheAccumulator")
+       }
   }
-
-  def hashFunction(path: String, numExecutors: Int): Int = {
-    val hashCode = path.hashCode() & Integer.MAX_VALUE // 使用路径的哈希码
-    hashCode % numExecutors // 取模以得到执行器索引
-  }
-  var executorLocations=getExecutorLocations()
 
   override def withFilters(partitionFilters: Seq[Expression], dataFilters: Seq[Expression]): FileScan = {
     this.copy(partitionFilters = partitionFilters, dataFilters = dataFilters)
@@ -58,15 +55,26 @@ case class LuceneScan(
     super.description() + ", PushedFilters: " + seqToString(pushedFilters)+",PushedAggregation:"+pushedAggregationsStr+",PushedGroupBy:"+pushedGroupByStr
   }
 
-  override def planInputPartitions(): Array[InputPartition] = {
-    val pp=partitions.map{
-      p:FilePartition=>
-       val locatedFiles= p.files.map{
-          pf=>
-            val locations=if (executorLocations.size>0){Array(executorLocations(hashFunction(pf.filePath,executorLocations.size)))} else Array.empty[String]
-          PartitionedFile(pf.partitionValues,pf.filePath,pf.start,pf.length,locations)
-        }
-        FilePartition(p.index,locatedFiles)
+  override  def planInputPartitions(): Array[InputPartition] = {
+     val executorCacheLocations =LuceneSearcherCache.luceneCacheAccumulator.value
+     println("cache list:")
+     executorCacheLocations.foreach{
+       kv=>println(s"${kv._1}=>${kv._2.mkString(",")}")
+     }
+    val pp = partitions.map { p: FilePartition =>
+      val locatedFiles = p.files.map { pf =>
+        // 1. 尝试将文件分配到缓存节点
+        val cacheLocations = executorCacheLocations.getOrElse(pf.filePath, Set.empty[String])
+        val partitionedFile =
+          if (cacheLocations.nonEmpty) {
+            PartitionedFile(pf.partitionValues,pf.filePath,pf.start,pf.length,cacheLocations.toArray)
+          } else {
+            // 2. 如果没有缓存节点，则分配到块位置
+            pf
+          }
+        partitionedFile
+      }
+      FilePartition(p.index, locatedFiles)
     }.toArray
     pp.toSeq.toArray
   }
