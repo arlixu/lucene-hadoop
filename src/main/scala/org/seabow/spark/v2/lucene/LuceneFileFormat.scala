@@ -33,8 +33,6 @@ import org.apache.spark.sql.v2.lucene.util.LuceneUtils
 import org.apache.spark.util.SerializableConfiguration
 import org.seabow.spark.v2.lucene.collector.PagingCollector
 
-import java.net.URI
-
 /** derived from binary file data source. Needed to support writing Lucene using the V2 API
  */
 class LuceneFileFormat extends FileFormat with DataSourceRegister {
@@ -84,11 +82,14 @@ class LuceneFileFormat extends FileFormat with DataSourceRegister {
                                       options: Map[String, String],
                                       hadoopConf: Configuration
                                     ): PartitionedFile => Iterator[InternalRow] = {
-    val broadcastedConf =
+    val broadcastedConf = {
       sparkSession.sparkContext.broadcast(new SerializableConfiguration(hadoopConf))
+    }
+    val luceneCacheAccumulator=LuceneSearcherCache.registerLuceneCacheAccumulatorInstances(sparkSession)
+
     (file: PartitionedFile) => {
       val conf = broadcastedConf.value.value
-      val searcher = LuceneSearcherCache.getSearcherInstance(file.filePath, conf)
+      val searcher = LuceneSearcherCache.getSearcherInstance(file.filePath, conf,luceneCacheAccumulator)
       val query = LuceneFilters.createFilter(dataSchema, filters)
       val deserializer = new LuceneDeserializer(dataSchema, requiredSchema, SQLConf.get.getConf(SQLConf.SESSION_LOCAL_TIMEZONE))
       var currentPage = 1

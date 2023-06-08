@@ -24,13 +24,7 @@ case class LuceneScan(
                        partitionFilters: Seq[Expression] = Seq.empty,
                        dataFilters: Seq[Expression] = Seq.empty,
                        var buildByHolder:Boolean=false) extends FileScan{
-
-  def registerLuceneCacheAccumulatorInstances(): Unit = {
-     if(!LuceneSearcherCache.luceneCacheAccumulator.isRegistered)
-       {
-         sparkSession.sparkContext.register(LuceneSearcherCache.luceneCacheAccumulator, "luceneCacheAccumulator")
-       }
-  }
+  val luceneCacheAccumulator=LuceneSearcherCache.registerLuceneCacheAccumulatorInstances(sparkSession)
 
   override def withFilters(partitionFilters: Seq[Expression], dataFilters: Seq[Expression]): FileScan = {
     this.copy(partitionFilters = partitionFilters, dataFilters = dataFilters)
@@ -42,7 +36,7 @@ case class LuceneScan(
     // The partition values are already truncated in `FileScan.partitions`.
     // We should use `readPartitionSchema` as the partition schema here.
     LucenePartitionReaderFactory(sparkSession.sessionState.conf, broadcastedConf,
-      dataSchema, readDataSchema, readPartitionSchema, pushedFilters,pushedAggregate)
+      dataSchema, readDataSchema, readPartitionSchema, pushedFilters,pushedAggregate,luceneCacheAccumulator)
   }
 
   lazy private val (pushedAggregationsStr, pushedGroupByStr) = if (pushedAggregate.nonEmpty) {
@@ -56,7 +50,7 @@ case class LuceneScan(
   }
 
   override  def planInputPartitions(): Array[InputPartition] = {
-     val executorCacheLocations =LuceneSearcherCache.luceneCacheAccumulator.value
+     val executorCacheLocations =luceneCacheAccumulator.value
      println("cache list:")
      executorCacheLocations.foreach{
        kv=>println(s"${kv._1}=>${kv._2.mkString(",")}")

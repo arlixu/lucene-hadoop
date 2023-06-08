@@ -506,7 +506,6 @@ object InMemoryDirIndex extends Logging {
         // which is very slow on some file system (RawLocalFileSystem, which is launch a
         // subprocess and parse the stdout).
         try {
-          //TODO 这里返回的是对应的.dir下的所有文件的block locations.
           val locations = fs.listStatus(new Path(f.getPath.toString+".dir")).map{f=>
             fs.getFileBlockLocations(f, 0, f.getLen).map { loc =>
               // Store BlockLocation objects to consume less memory

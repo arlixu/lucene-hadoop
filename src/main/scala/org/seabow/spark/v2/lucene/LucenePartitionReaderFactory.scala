@@ -3,7 +3,7 @@ package org.seabow.spark.v2.lucene
 import org.apache.hadoop.conf.Configuration
 import org.apache.lucene.document.Document
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.cache.LuceneSearcherCache
+import org.apache.spark.cache.{LuceneCacheAccumulator, LuceneSearcherCache}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.SpecificInternalRow
 import org.apache.spark.sql.connector.read.PartitionReader
@@ -26,14 +26,14 @@ case class LucenePartitionReaderFactory(
       dataSchema: StructType,
       readDataSchema: StructType,
       partitionSchema: StructType,
-      filters: Array[Filter],aggregation: Option[Aggregation]) extends FilePartitionReaderFactory{
+      filters: Array[Filter],aggregation: Option[Aggregation],luceneCacheAccumulator:LuceneCacheAccumulator) extends FilePartitionReaderFactory{
   override def buildReader(file: PartitionedFile): PartitionReader[InternalRow] = {
     val conf=broadcastedConf.value.value
     if(aggregation.nonEmpty){
       return buildReaderWithAggregation(file, conf)
     }
 
-   val searcher=LuceneSearcherCache.getSearcherInstance(file.filePath,conf)
+   val searcher=LuceneSearcherCache.getSearcherInstance(file.filePath,conf,luceneCacheAccumulator)
     val query = LuceneFilters.createFilter(dataSchema,filters)
 
     val deserializer=new LuceneDeserializer(dataSchema,readDataSchema,SQLConf.get.getConf(SQLConf.SESSION_LOCAL_TIMEZONE))
@@ -102,7 +102,7 @@ case class LucenePartitionReaderFactory(
 
   def buildReaderWithAggregation(file: PartitionedFile,
                                  conf: Configuration):PartitionReader[InternalRow] ={
-    val searcher=LuceneSearcherCache.getSearcherInstance(file.filePath,conf)
+    val searcher=LuceneSearcherCache.getSearcherInstance(file.filePath,conf,luceneCacheAccumulator)
     val query = LuceneFilters.createFilter(dataSchema,filters)
     var internalRows=LuceneAggUtils.createAggInternalRows(aggregation.get,searcher,query,dataSchema,readDataSchema,partitionSchema,conf).iterator
     val fileReader= new PartitionReader[InternalRow] {
