@@ -90,16 +90,17 @@ Condition: "array_contains(map_tags.`sports`, 'basketball')"
 Condition: "map_tags['sports'] is not null"
 
 | Storage Format | Query Result Count | Query 1 Duration (secs) | Query 2 Duration (secs) | Query 3 Duration (secs) |
-| -------------- | ----------------- | ---------------------- | ---------------------- | ---------------------- |
-| ORC            | 49,950,531        | 16                     | 14                     | 12                     |
-| Lucene         | 49,950,531        | 19                     | 2                      | 2                      |
+| -------------- | ----------------- |-------------------------| ---------------------- | ---------------------- |
+| ORC            | 49,950,531        | 16                      | 14                     | 12                     |
+| Lucene         | 49,950,531        | 8                       | 2                      | 2                      |
 
 Faceted Aggregation Test:
 
-| Storage Format | Aggregation Duration (secs) |
-| -------------- | -------------------------- |
-| ORC            | 26                         |
-| Lucene         | 8                          |
+| Storage Format | Aggregation Duration 1 (secs) | Aggregation Duration 2 (secs) | Aggregation Duration 3 (secs) |
+| -------------- | ---------------------------- | ---------------------------- | ---------------------------- |
+| ORC            | 55                           | 31                           | 26                           |
+| Lucene         | 52                           | 8                            | 7                            |
+
 
 Based on the test results, the following conclusions can be drawn:
 

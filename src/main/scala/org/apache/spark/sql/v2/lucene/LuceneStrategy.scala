@@ -6,7 +6,6 @@ import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.v2.{BatchScanExec, DataSourceV2ScanRelation}
 import org.apache.spark.sql.execution.{FilterExec, LeafExecNode, ProjectExec, SparkPlan}
-import org.seabow.spark.v2.lucene.LuceneScan
 
 class LuceneStrategy extends Strategy{
   private def withProjectAndFilter(

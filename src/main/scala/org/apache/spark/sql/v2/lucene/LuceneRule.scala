@@ -16,7 +16,6 @@ import org.apache.spark.sql.v3.evolving.expressions.aggregate._
 import org.apache.spark.sql.v3.evolving.expressions.{V2Expression, V2SortOrder}
 import org.apache.spark.sql.v3.evolving.util.SchemaUtils.restoreOriginalOutputNames
 import org.apache.spark.sql.v3.evolving.util.{AliasHelper, V2ExpressionBuilder}
-import org.seabow.spark.v2.lucene.LuceneScan
 
 import scala.collection.mutable
 

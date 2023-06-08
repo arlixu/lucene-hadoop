@@ -9,6 +9,8 @@ import org.apache.spark.sql.execution.datasources.{PartitioningAwareFileIndex, P
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
+import org.apache.spark.sql.v2.lucene
+import org.apache.spark.sql.v2.lucene.LuceneScan
 import org.apache.spark.sql.v3.evolving.expressions.aggregate.Aggregation
 import org.apache.spark.sql.v3.evolving.{SupportsLucenePushDownFilters, SupportsPushDownAggregates}
 
@@ -36,7 +38,7 @@ case class LuceneScanBuilder(
       finalSchema = readDataSchema()
     }
     val partitionFilters= if(oldScan!=null){oldScan.partitionFilters}else Seq.empty
-    LuceneScan(sparkSession, hadoopConf, fileIndex, dataSchema,
+    lucene.LuceneScan(sparkSession, hadoopConf, fileIndex, dataSchema,
       finalSchema, readPartitionSchema(), options,  pushedFilters(),pushedAggregations,partitionFilters=partitionFilters,buildByHolder=buildByHolder)
   }
   protected var dataFilters = Seq.empty[Expression]

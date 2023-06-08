@@ -10,7 +10,7 @@ import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.v2.lucene.util.LuceneUtils
-import org.seabow.spark.v2.lucene.{LuceneScan, LuceneScanBuilder}
+import org.seabow.spark.v2.lucene.LuceneScanBuilder
 
 case class LuceneTable(
                         name: String,
