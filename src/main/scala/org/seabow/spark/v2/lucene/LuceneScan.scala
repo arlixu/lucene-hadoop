@@ -63,7 +63,8 @@ case class LuceneScan(
       p:FilePartition=>
        val locatedFiles= p.files.map{
           pf=>
-          PartitionedFile(pf.partitionValues,pf.filePath,pf.start,pf.length,Array(executorLocations(hashFunction(pf.filePath,executorLocations.size))))
+            val locations=if (executorLocations.size>0){Array(executorLocations(hashFunction(pf.filePath,executorLocations.size)))} else Array.empty[String]
+          PartitionedFile(pf.partitionValues,pf.filePath,pf.start,pf.length,locations)
         }
         FilePartition(p.index,locatedFiles)
     }.toArray

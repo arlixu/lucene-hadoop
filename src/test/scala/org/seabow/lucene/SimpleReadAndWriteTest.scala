@@ -4,9 +4,9 @@ import com.github.mrpowers.spark.fast.tests.DatasetComparer
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.Row
+import org.apache.spark.sql._
 import org.apache.spark.sql.execution.ExtendedMode
-import org.apache.spark.sql.functions.{col, count, explode_outer, sum}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.lucene._
 import org.apache.spark.sql.types._
 import org.scalatest.BeforeAndAfterAll
