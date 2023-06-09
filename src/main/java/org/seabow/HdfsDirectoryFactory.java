@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NRTCachingDirectory;
+import org.apache.spark.SparkEnv;
 import org.seabow.cache.store.BlockCache;
 import org.seabow.cache.store.BlockDirectory;
 import org.seabow.cache.store.BlockDirectoryCache;
@@ -35,14 +36,9 @@ import org.slf4j.LoggerFactory;
 public class HdfsDirectoryFactory{
     public static Logger LOG = LoggerFactory
             .getLogger(HdfsDirectoryFactory.class);
-
-    public static final String BLOCKCACHE_SLAB_COUNT = "spark.lucene.blockcache.slab.count";
     public static final String BLOCKCACHE_DIRECT_MEMORY_ALLOCATION = "spark.lucene.blockcache.direct.memory.allocation";
     public static final String BLOCKCACHE_ENABLED = "spark.lucene.blockcache.enabled";
     public static final String BLOCKCACHE_GLOBAL = "spark.lucene.blockcache.global";
-    public static final String BLOCKCACHE_READ_ENABLED = "spark.lucene.blockcache.read.enabled";
-    public static final String BLOCKCACHE_WRITE_ENABLED = "spark.lucene.blockcache.write.enabled";
-
     public static final String NRTCACHINGDIRECTORY_ENABLE = "spark.lucene.nrtcachingdirectory.enable";
     public static final String NRTCACHINGDIRECTORY_MAXMERGESIZEMB = "spark.lucene.nrtcachingdirectory.maxmergesizemb";
     public static final String NRTCACHINGDIRECTORY_MAXCACHEMB = "spark.lucene.nrtcachingdirectory.maxcachedmb";
@@ -52,19 +48,25 @@ public class HdfsDirectoryFactory{
     public static final String KERBEROS_KEYTAB = "spark.lucene.security.kerberos.keytabfile";
     public static final String KERBEROS_PRINCIPAL = "spark.lucene.security.kerberos.principal";
 
-    public static final String HDFS_HOME = "spark.lucene.home";
-
-    public static final String CONFIG_DIRECTORY = "spark.lucene.confdir";
-
-    private String hdfsDataDir;
-
-    private String confDir;
-
     private static BlockCache globalBlockCache;
 
     public static Metrics metrics;
     private static Boolean kerberosInit;
 
+    private Long maxMemoryForCache(Boolean isDirect){
+            //通过hadoop configuration 获取 executor memory和
+        SparkEnv sparkEnv = SparkEnv.get();
+        Long maxMemoryForCache=-1l;
+        if(sparkEnv!=null){
+            if(isDirect)
+            {
+                maxMemoryForCache= SparkEnv.get().memoryManager().maxOnHeapStorageMemory()/2;
+            }else {
+                maxMemoryForCache= SparkEnv.get().memoryManager().maxOffHeapStorageMemory()/2;
+            }
+        }
+        return maxMemoryForCache;
+    }
 
     public Directory create(String path,Configuration conf)
             throws IOException {
@@ -75,47 +77,49 @@ public class HdfsDirectoryFactory{
             metrics = new Metrics();
         }
 
-        boolean blockCacheGlobal = false;
+        boolean blockCacheGlobal =  conf.getBoolean(BLOCKCACHE_GLOBAL,true);
         Directory dir = null;
 
         if (blockCacheEnabled) {
-            int numberOfBlocksPerBank = 16384;
-
+            int numberOfBlocksPerBank =conf.getInt(NUMBEROFBLOCKSPERBANK,16384);
             int blockSize = BlockDirectory.BLOCK_SIZE;
-
-            int bankCount = 1;
-
-            boolean directAllocation = false;
-
+            boolean directAllocation = conf.getBoolean(BLOCKCACHE_DIRECT_MEMORY_ALLOCATION,false);;
+            long maxMemoryForCache=maxMemoryForCache(directAllocation);
+            LOG.info(
+                    "max on-heap memory for cache [{}]", maxMemoryForCache);
             int slabSize = numberOfBlocksPerBank * blockSize;
-            LOG.info(
-                    "Number of slabs of block cache [{}] with direct memory allocation set to [{}]",
-                    bankCount, directAllocation);
-            LOG.info(
-                    "Block cache target memory usage, slab size of [{}] will allocate [{}] slabs and use ~[{}] bytes",
-                    new Object[] {slabSize, bankCount,
-                            ((long) bankCount * (long) slabSize)});
+            int bankCount=(int)(maxMemoryForCache/slabSize);
+            if(bankCount>0){
+                LOG.info(
+                        "Number of slabs of block cache [{}] with direct memory allocation set to [{}]",
+                        bankCount, directAllocation);
+                LOG.info(
+                        "Block cache target memory usage, slab size of [{}] will allocate [{}] slabs and use ~[{}] bytes",
+                        new Object[] {slabSize, bankCount,
+                                ((long) bankCount * (long) slabSize)});
 
-            int bufferSize = 128;
-            int bufferCount =  128 * 128;
+                int bufferSize = blockSize;
+                int bufferCount = 256;
 
-            BlockCache blockCache = getBlockDirectoryCache(numberOfBlocksPerBank,
-                    blockSize, bankCount, directAllocation, slabSize,
-                    bufferSize, bufferCount, blockCacheGlobal);
+                BlockCache blockCache = getBlockDirectoryCache(numberOfBlocksPerBank,
+                        blockSize, bankCount, directAllocation, slabSize,
+                        bufferSize, bufferCount, blockCacheGlobal);
 
-            Cache cache = new BlockDirectoryCache(blockCache, path, metrics, blockCacheGlobal);
-            HdfsDirectory hdfsDirectory = new HdfsDirectory(new Path(path), conf);
-            dir = new BlockDirectory(path, hdfsDirectory, cache, null,
-                    true, false);
+                Cache cache = new BlockDirectoryCache(blockCache, path, metrics, blockCacheGlobal);
+                HdfsDirectory hdfsDirectory = new HdfsDirectory(new Path(path), conf);
+                dir = new BlockDirectory(path, hdfsDirectory, cache, null,
+                        true, false);
+            }else {
+                dir = new HdfsDirectory(new Path(path), conf);
+            }
         } else {
             dir = new HdfsDirectory(new Path(path), conf);
         }
 
-        boolean nrtCachingDirectory = true;
+        boolean nrtCachingDirectory = conf.getBoolean(NRTCACHINGDIRECTORY_ENABLE,false);
         if (nrtCachingDirectory) {
-            double nrtCacheMaxMergeSizeMB = 16;
-            double nrtCacheMaxCacheMB = 192;
-
+            double nrtCacheMaxMergeSizeMB = conf.getDouble(NRTCACHINGDIRECTORY_MAXMERGESIZEMB,16);
+            double nrtCacheMaxCacheMB =conf.getDouble(NRTCACHINGDIRECTORY_MAXCACHEMB,192);
             return new NRTCachingDirectory(dir, nrtCacheMaxMergeSizeMB,
                     nrtCacheMaxCacheMB);
         }
@@ -152,7 +156,7 @@ public class HdfsDirectoryFactory{
         } catch (OutOfMemoryError e) {
             throw new RuntimeException(
                     "The max direct memory is likely too low.  Either increase it (by adding -XX:MaxDirectMemorySize=<size>g -XX:+UseLargePages to your containers startup args)"
-                            + " or disable direct allocation using spark.lucene.blockcache.direct.memory.allocation=false in solrconfig.xml. If you are putting the block cache on the heap,"
+                            + " or disable direct allocation using spark.lucene.blockcache.direct.memory.allocation=false. If you are putting the block cache on the heap,"
                             + " your java heap size might not be large enough."
                             + " Failed allocating ~" + totalMemory / 1000000.0 + " MB.",
                     e);
