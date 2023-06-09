@@ -16,9 +16,6 @@
  */
 package org.seabow;
 
-/**
- * @lucene.experimental
- */
 public interface Store {
 
     byte[] takeBuffer(int bufferSize);

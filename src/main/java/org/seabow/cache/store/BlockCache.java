@@ -28,9 +28,6 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import org.seabow.Metrics;
 
-/**
- * @lucene.experimental
- */
 public class BlockCache {
 
   public static final int _128M = 134217728;

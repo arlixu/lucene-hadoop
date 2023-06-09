@@ -21,9 +21,7 @@ import java.util.concurrent.atomic.AtomicLongArray;
 
 import org.apache.lucene.util.LongBitSet;
 
-/**
- * @lucene.experimental
- */
+
 public class BlockLocks {
   
   private AtomicLongArray bits;

@@ -17,9 +17,6 @@ package org.seabow.cache.store;
  * limitations under the License.
  */
 
-/**
- * @lucene.experimental
- */
 public interface Cache {
   
   /**

@@ -26,9 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * @lucene.experimental
- */
+
 public class BlockDirectoryCache implements Cache {
   private final BlockCache blockCache;
   private final AtomicInteger counter = new AtomicInteger();
@@ -52,8 +50,6 @@ public class BlockDirectoryCache implements Cache {
   
   /**
    * Expert: mostly for tests
-   * 
-   * @lucene.experimental
    */
   public BlockCache getBlockCache() {
     return blockCache;

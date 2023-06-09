@@ -16,9 +16,6 @@ package org.seabow.cache.store;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * @lucene.experimental
- */
 public class BlockCacheKey implements Cloneable {
   
   private long block;

@@ -1,9 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.seabow</groupId>
+  <groupId>io.github.arlixu</groupId>
   <artifactId>lucene-hadoop</artifactId>
-  <version>0.1</version>
+  <name>${project.artifactId}</name>
+  <version>0.1.2</version>
+  <description>A Lucene Datasource of Spark.Supports push down filter and push down aggeragation</description>
+  <url>https://github.com/arlixu/lucene-hadoop</url>
+  <issueManagement>
+    <system>Github Issue</system>
+    <url>https://github.com/arlixu/lucene-hadoop/issues</url>
+  </issueManagement>
+  <developers>
+    <developer>
+      <name>Xu Yali</name>
+      <email>289964653@qq.com</email>
+      <roles>
+        <role>Independent Developer</role>
+      </roles>
+      <timezone>+8</timezone>
+    </developer>
+  </developers>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:git@github.com:arlixu/lucene-hadoop.git</connection>
+    <developerConnection>scm:git:git@github.com:arlixu/lucene-hadoop.git</developerConnection>
+    <url>git@github.com:arlixu/lucene-hadoop.git</url>
+  </scm>
   <build>
     <pluginManagement>
       <plugins>
@@ -97,6 +126,62 @@
         </executions>
         <configuration>
           <scalaVersion>${scala.version.minor}</scalaVersion>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.2.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.1.1</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <sourcepath>src/main/java</sourcepath>
+          <classpath>
+            <path>src/main/java</path>
+            <path>src/main/scala</path>
+          </classpath>
+          <failOnError>false</failOnError>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.8</version>
+        <extensions>true</extensions>
+        <configuration>
+          <serverId>ossrh</serverId>
+          <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+          <autoReleaseAfterClose>true</autoReleaseAfterClose>
         </configuration>
       </plugin>
     </plugins>
@@ -707,10 +792,13 @@
   </dependencies>
   <distributionManagement>
     <repository>
-      <id>github</id>
-      <name>GitHub Apache Maven Packages</name>
-      <url>https://maven.pkg.github.com/arlixu/lucene-hadoop</url>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
     </repository>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
   </distributionManagement>
   <properties>
     <lucene.version>8.11.1</lucene.version>

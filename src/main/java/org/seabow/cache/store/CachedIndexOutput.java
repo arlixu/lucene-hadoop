@@ -24,7 +24,6 @@ import org.apache.lucene.store.IndexOutput;
  * Cache the blocks as they are written. The cache file name is the name of
  * the file until the file is closed, at which point the cache is updated
  * to include the last modified date (which is unknown until that point).
- * @lucene.experimental
  */
 public class CachedIndexOutput extends ReusedBufferedIndexOutput {
   private final BlockDirectory directory;

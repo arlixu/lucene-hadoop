@@ -35,9 +35,6 @@ import org.seabow.HdfsDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * @lucene.experimental
- */
 public class BlockDirectory extends FilterDirectory{
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -279,8 +276,6 @@ public class BlockDirectory extends FilterDirectory{
 
   /**
    * Expert: mostly for tests
-   *
-   * @lucene.experimental
    */
   public Cache getCache() {
     return cache;

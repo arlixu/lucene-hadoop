@@ -20,9 +20,6 @@ import java.io.IOException;
 
 import org.apache.lucene.store.IndexOutput;
 
-/**
- * @lucene.experimental
- */
 public abstract class ReusedBufferedIndexOutput extends IndexOutput {
 
   public static final int BUFFER_SIZE = 1024;

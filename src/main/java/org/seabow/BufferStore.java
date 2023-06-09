@@ -22,9 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * @lucene.experimental
- */
 public class BufferStore implements Store {
 
     private static final Store EMPTY = new Store() {

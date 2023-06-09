@@ -19,9 +19,6 @@ package org.seabow.cache.store;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * @lucene.experimental
- */
 public class BlockCacheLocation {
   
   private int block;
