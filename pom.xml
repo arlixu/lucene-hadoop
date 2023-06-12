@@ -256,11 +256,6 @@
                 <version>3.1.1</version>
                 <configuration>
                     <sourcepath>src/main/java</sourcepath>
-                    <classpath>
-                        <!-- 添加Java和Scala的类路径 -->
-                        <path>src/main/java</path>
-                        <path>src/main/scala</path>
-                    </classpath>
                     <failOnError>false</failOnError>
                 </configuration>
                 <executions>
