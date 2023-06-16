@@ -1,3 +1,5 @@
+This repo has been moved to https://github.com/seabow/spark-lucene
+
 # lucene-hadoop
 A Lucene Datasource of Spark.Supports push down filter and push down aggeragation.Test on spark version 3.0.2
 
